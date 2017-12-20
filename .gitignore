@@ -1,0 +1,9 @@
+# Directories #
+.idea/*
+__pycache__/
+cache/*
+data/*
+logs/*
+
+# Files #
+settings.json
