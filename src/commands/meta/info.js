@@ -13,10 +13,10 @@ module.exports = class extends Command {
             argsPromptLimit: 0,
             args: [
                 {
-                    "key": "member",
-                    "type": "member",
-                    "prompt": "Who should I gather info about?",
-                    "default": msg => msg.member
+                    key: "member",
+                    type: "member",
+                    prompt: "Who should I gather info about?",
+                    defaultValue: msg => msg.member
                 }
             ]
         });

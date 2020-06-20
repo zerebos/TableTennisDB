@@ -32,6 +32,7 @@ client.registry.registerGroups([
     ["reactions", "Auto Reactions"],
     ["ittf", "ITTF"],
     ["revspin", "RevSpin"],
+    ["profiles", "TT Profiles"]
 ]);
 
 client.registry.registerDefaultTypes();
