@@ -1,9 +1,4 @@
-# Directories #
-.idea/*
-__pycache__/
-cache/*
-data/*
-logs/*
-
-# Files #
-settings.json
+node_modules/
+config.json
+settings.sqlite3
+src/commands/revspin/cache

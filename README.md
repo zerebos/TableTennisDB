@@ -1,9 +1,9 @@
 # TableTennisDB - [Invite Me](https://discordapp.com/oauth2/authorize?client_id=317185553349214209&scope=bot&permissions=126016)
 [![Discord Bots](https://discordbots.org/api/widget/317185553349214209.svg)](https://discordbots.org/bot/317185553349214209)
 
-**Bot Prefix - `/`**
+**Bot Prefix - `!`**
 
-For support you can visit [this discord server](https://discord.gg/cdzD9wF).
+For support you can visit [this discord server](https://discord.gg/TyFxKer).
 
 
 # Features
