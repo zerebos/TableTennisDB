@@ -18,7 +18,6 @@ module.exports = class extends Command {
     }
     
     async run(msg, query) {
-        if (!this.client.isOwner(msg.author)) return msg.failure("Sorry this command isn't quite ready yet.");
         query = query.toLowerCase();
         const categories = Object.keys(this.group.cache);
         const category = categories.find(c => c === query.split(" ")[0]);
