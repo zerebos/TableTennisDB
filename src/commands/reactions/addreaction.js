@@ -43,7 +43,7 @@ module.exports = class extends Command {
             const unusable = [];
             for (const [key, reaction] of reactions) {
                 const emoji = reaction.emoji;
-                if (!emoji.id || this.client.emojis.has(emoji.id)) continue;
+                if (!emoji.id || this.client.emojis.cache.has(emoji.id)) continue;
                 unusable.push(`${emoji}`);
                 reactions.delete(key);
             }
