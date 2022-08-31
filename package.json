@@ -1,24 +1,26 @@
 {
-  "name": "bandagedbd",
-  "version": "0.0.1",
-  "description": "Bot for BBD",
-  "main": "src/index.js",
+  "name": "tabletennisdb",
+  "version": "1.0.0",
+  "description": "TableTennisDB looks up rankings and event information on ITTF and equipment ratings on RevSpin.",
+  "main": "src/bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node .",
+    "deploy": "node scripts/deploy-commands.js",
+    "clear": "node scripts/clear-commands.js"
   },
   "author": "Zack Rauen",
   "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.22.0"
+  },
   "dependencies": {
-    "bufferutil": "^4.0.1",
-    "cheerio": "^1.0.0-rc.3",
-    "discord.js": "^12.2.0",
-    "discord.js-commando": "github:discordjs/Commando",
-    "erlpack": "github:discordapp/erlpack",
-    "node-opus": "^0.3.3",
-    "sodium": "^3.0.2",
-    "sqlite": "^3.0.6",
-    "string-similarity": "^4.0.1",
-    "utf-8-validate": "^5.0.2"
+    "@discordjs/rest": "^1.1.0",
+    "@keyv/sqlite": "^3.5.3",
+    "cheerio": "^1.0.0-rc.12",
+    "discord.js": "^14.3.0",
+    "keyv": "^4.4.1",
+    "sqlite3": "^5.0.11",
+    "string-similarity": "^4.0.4"
   }
 }

@@ -1,4 +1,6 @@
 node_modules/
-config.json
+config.js
 settings.sqlite3
+legacy.sqlite3
 src/commands/revspin/cache
+.revspin

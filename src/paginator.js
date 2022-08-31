@@ -1,28 +1,43 @@
-// pager = Pages(self.bot, message=ctx.message, entries=list(data.keys()))
-// pager.embed.colour = 0x738bd7  # blurple
-// pager.embed.set_author(name=ctx.message.server.name + " Reactions", icon_url=ctx.message.server.icon_url)
-// await pager.paginate()
-
-const {MessageEmbed} = require("discord.js");
+const {EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require("discord.js");
 
 module.exports = class Paginator {
-    constructor(client, command, entries, itemsPerPage = 10) {
-        this.client = client;
-        this.command = command;
+    constructor(interaction, entries, itemsPerPage = 10) {
+        this.interaction = interaction;
         this.entries = entries;
         this.itemsPerPage = itemsPerPage;
+        this.embed = new EmbedBuilder();
         this.numPages = Math.floor(this.entries.length / this.itemsPerPage);
         if (this.entries.length % this.itemsPerPage) this.numPages = this.numPages + 1;
-        this.embed = new MessageEmbed();
-        this.reactions = [
-            this.numPages > 2 && ["⏪", this.firstPage.bind(this)],
-            ["◀️", this.previousPage.bind(this)],
-            ["▶️", this.nextPage.bind(this)],
-            this.numPages > 2 && ["⏩", this.lastPage.bind(this)],
-            // ["\N{INPUT SYMBOL FOR NUMBERS}", this.numbered_page .bind(this)],
-            ["⏹️", c => c.stop("user")],
-            // ["\N{INFORMATION SOURCE}", this.show_help.bind(this)],
-        ].filter(r => r);
+    }
+
+    get buttons() {
+        return new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId("first")
+                    .setLabel("<< First")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(this.currentPage === 1),
+                new ButtonBuilder()
+                    .setCustomId("previous")
+                    .setLabel("< Previous")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(this.currentPage === 1),
+                new ButtonBuilder()
+                    .setCustomId("next")
+                    .setLabel("Next >")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(this.currentPage === this.numPages),
+                new ButtonBuilder()
+                    .setCustomId("last")
+                    .setLabel("Last >>")
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(this.currentPage === this.numPages),
+                new ButtonBuilder()
+                    .setCustomId("stop")
+                    .setLabel("Stop")
+                    .setStyle(ButtonStyle.Danger),
+        );
     }
 
     getEntriesForPage(page) {
@@ -42,28 +57,30 @@ module.exports = class Paginator {
         this.currentPage = page;
         const currentEntries = this.getEntriesForPage(page);
         this.embed.setDescription(currentEntries.map((v, i) => `${i + 1 + ((this.currentPage - 1) * this.itemsPerPage)}. ${v}`).join("\n"));
-        this.embed.setFooter(`Page ${this.currentPage} of ${this.numPages} (${this.entries.length} items)`);
-        if (this.message) return await this.message.edit("", this.embed);
-        this.message = await this.command.channel.send(this.embed);
-        for (const reaction of this.reactions) await this.message.react(reaction[0]);
+        this.embed.setFooter({text: `Page ${this.currentPage} of ${this.numPages} (${this.entries.length} items)`});
+        if (this.buttonInteraction) await this.buttonInteraction.update({embeds: [this.embed], components: [this.buttons]});
+        await this.interaction.editReply({embeds: [this.embed], components: [this.buttons]});
     }
 
     async paginate() {
         await this.showPage(1);
 
-        // while (this.stillNavigating) {
-        //     const reactionCollector = (r, u) => u.id === this.message.author.id && this.reactions.find(e => e[0] == e.emoji.name);
-        //     const reactions = await this.message.awaitReactions(reactionCollector, {max: 1, time: 30000});
-        // }
+        const msg = await this.interaction.fetchReply();
+        const filter = i => i.user.id === this.interaction.user.id;
 
-        const filter = (r, u) => u.id === this.command.author.id && this.reactions.find(e => e[0] == r.emoji.name);
-        const collector = await this.message.createReactionCollector(filter, {idle: 60000});
-        collector.on("collect", (r, u) => {
-            const action = this.reactions.find(e => e[0] == r.emoji.name)[1];
-            r.users.remove(u);
-            collector.resetTimer();
-            action(collector);
+        const collector = msg.createMessageComponentCollector({filter, time: 60000});
+
+        collector.on("collect", async i => {
+            this.buttonInteraction = i;
+            if (i.customId === "first") await this.firstPage();
+            if (i.customId === "last") await this.lastPage();
+            if (i.customId === "previous") await this.previousPage();
+            if (i.customId === "next") await this.nextPage();
+            if (i.customId === "stop") collector.stop();
         });
-        collector.on("end", () => this.message.reactions.removeAll());
+
+        collector.on("end", async () => {
+            await this.interaction.editReply({components: []});
+        });
     }
 };

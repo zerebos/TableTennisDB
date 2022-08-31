@@ -34,17 +34,13 @@ module.exports = class extends Command {
     
     async run(msg, {channel}) {
         const state = await msg.guild.settings.get("greeting", {enabled: false});
-        console.log("Channel:", channel);
         if (typeof(channel) === "string") {
             channel = channel.split(" ");
-            console.log("Split:", channel);
             const cmd = channel[0];
             const shouldEnable = cmd === "enable";
             const shouldDisable = cmd === "disable";
             if (cmd === "set") {
-                console.log(channel);
                 let message = channel.slice(1).join(" ");
-                console.log(channel);
                 if (channel.length === 1) {
                     await msg.say(`How should the user be greeted? (Use \`{{user}}\` as a placeholder for the user.)`);
                     const response = (await msg.channel.awaitMessages(m => m.author.id === msg.author.id, {max: 1, time: 10000})).first();

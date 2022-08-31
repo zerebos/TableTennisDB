@@ -11,7 +11,7 @@ const loadFile = promisify(fs.readFile);
 const exists = promisify(fs.exists);
 const mkdir = promisify(fs.mkdir);
 
-const cacheFolder = path.resolve(__dirname, "cache");
+const cacheFolder = path.resolve(__dirname, "..", "..", cache");
 
 const categories = ["rubber", "blade", "pips", "table", "balls", "shoes", "sponge", "trainingdvd", "robot", "net", "premade"];
 
