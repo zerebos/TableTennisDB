@@ -83,20 +83,21 @@ module.exports = {
      */
     async button(interaction) {
         const id = interaction.customId.split("-")[1];
+        const profile = await profiles.get(interaction.user.id);
 
         if (id === "gear") {
             const modal = new ModalBuilder().setTitle("Add Your Gear").setCustomId("profile-gear");
-            const forehand = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("forehand").setLabel("Forehand").setStyle(TextInputStyle.Short));
-            const backhand = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("backhand").setLabel("Backhand").setStyle(TextInputStyle.Short));
-            const blade = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("blade").setLabel("Blade").setStyle(TextInputStyle.Short));
+            const forehand = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("forehand").setLabel("Forehand").setStyle(TextInputStyle.Short).setValue(profile.forehand));
+            const backhand = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("backhand").setLabel("Backhand").setStyle(TextInputStyle.Short).setValue(profile.backhand));
+            const blade = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("blade").setLabel("Blade").setStyle(TextInputStyle.Short).setValue(profile.blade));
             modal.addComponents(forehand, backhand, blade);
             await interaction.showModal(modal);
         }
         if (id === "skills") {
             const modal = new ModalBuilder().setTitle("Add Your Skills").setCustomId("profile-skills");
-            const strengths = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("strengths").setLabel("Strengths").setStyle(TextInputStyle.Short));
-            const weaknesses = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("weaknesses").setLabel("Weaknesses").setStyle(TextInputStyle.Short));
-            const playstyle = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("playstyle").setLabel("Playstyle").setStyle(TextInputStyle.Short));
+            const strengths = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("strengths").setLabel("Strengths").setStyle(TextInputStyle.Short).setValue(profile.strengths));
+            const weaknesses = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("weaknesses").setLabel("Weaknesses").setStyle(TextInputStyle.Short).setValue(profile.weaknesses));
+            const playstyle = new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("playstyle").setLabel("Playstyle").setStyle(TextInputStyle.Short).setValue(profile.playstyle));
             modal.addComponents(strengths, weaknesses, playstyle);
             await interaction.showModal(modal);
         }
