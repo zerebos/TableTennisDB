@@ -3,6 +3,7 @@ const Similarity = require("string-similarity");
 const https = require("https");
 const Cheerio = require("cheerio");
 
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("revspin")
@@ -14,9 +15,10 @@ module.exports = {
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
     async execute(interaction) {
+        await interaction.deferReply();
         let query = interaction.options.getString("query").toLowerCase();
-        const categories = Object.keys(interaction.client.revspin);
-        const category = categories.find(c => c === query.split(" ")[0]);
+        const cachedCategories = Object.keys(interaction.client.revspin);
+        const category = cachedCategories.find(c => c === query.split(" ")[0]);
         if (category) query = query.split(" ").slice(1).join(" ");
 
         
@@ -43,7 +45,7 @@ module.exports = {
     async search(interaction, {query, category, results}) {
         const top = results.slice(0, 5).map(r => `${r.name} - ${r.similarity.toFixed(2)}%`);
         // {title: `Top results for \`${query}\``, description: top.join("\n")}
-        await interaction.reply({embeds: [new EmbedBuilder().setTitle(`Top results for \`${query}\` in \`${category ?? "all"}\``).setDescription(top.join("\n"))]});
+        await interaction.editReply({embeds: [new EmbedBuilder().setTitle(`Top results for \`${query}\` in \`${category ?? "all"}\``).setDescription(top.join("\n"))]});
     },
 
     /** 
@@ -84,6 +86,6 @@ module.exports = {
         if (user && user.length) infoEmbed.addFields({name: "User Ratings", value: user.map(r => `**${r.label}:** \`${r.value}\``).join("\n")});
         if (manufacturer && manufacturer.length) infoEmbed.addFields({name: "Manufacturer Ratings", value: manufacturer.map(r => `**${r.label}:** \`${r.value}\``).join("\n")});
         infoEmbed.setColor("Blue");
-        await interaction.reply({embeds: [infoEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("See on RevSpin.net").setStyle(ButtonStyle.Link).setURL(url))]});
+        await interaction.editReply({embeds: [infoEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("See on RevSpin.net").setStyle(ButtonStyle.Link).setURL(url))]});
     },
 };
