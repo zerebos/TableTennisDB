@@ -20,6 +20,7 @@ module.exports = {
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
     async execute(interaction) {
+        await interaction.deferReply();
         const aboutEmbed = new EmbedBuilder();
         aboutEmbed.setAuthor({name: interaction.client.user.tag, iconURL: interaction.client.user.displayAvatarURL()});
         aboutEmbed.setFooter({text: "Made with discord.js", iconURL: "https://i.imgur.com/jt10lJI.png"});
@@ -47,7 +48,8 @@ module.exports = {
         if (config.github) addField(`GitHub`, `[Click Here!](${config.github})`, true);
         if (config.topgg) addField(`Top.gg`, `[Click Here!](https://top.gg/bot/${config.topgg})`, true);
 
-        const servingText = `${interaction.client.guilds.cache.size.toLocaleString()} Servers`;
+        let servingText = `${interaction.client.guilds.cache.size.toLocaleString()} Servers\n`;
+        servingText += `${interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0).toLocaleString()} Users`;
         addField("Serving", servingText, true);
 
         const textChannelCount = interaction.client.channels.cache.filter(c => c.type === ChannelType.GuildText).size.toLocaleString();
@@ -90,7 +92,7 @@ module.exports = {
         addField(`Commands Run`, commandsRun, true);
 
         addField(`Uptime`, humanReadableUptime(now - interaction.client.readyAt), true);
-        await interaction.reply({embeds: [aboutEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(`Invite ${interaction.client.user.username}`).setStyle(ButtonStyle.Link).setURL(inviteLink))]});
+        await interaction.editReply({embeds: [aboutEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(`Invite ${interaction.client.user.username}`).setStyle(ButtonStyle.Link).setURL(inviteLink))]});
     },
 };
 
