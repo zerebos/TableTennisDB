@@ -57,14 +57,19 @@ module.exports = {
         const clubRoute = $(stats.get(6)).find("a").attr("href");
         const tournamentRating = $(stats.get(7)).text();
         const tournamentDate = $(stats.get(8)).text();
-        // const leagueRating = $(stats.get(9)).text();
-        // const leagueDate = $(stats.get(10)).text();
+        const leagueRating = $(stats.get(9)).text();
+        const leagueDate = $(stats.get(10)).text();
         // const membership = $(stats.get(11)).text();
         
         const embed = new EmbedBuilder().setColor("White").setTitle(`${first} ${last}`)
                 .addFields(
-                    {name: "Rating", value: tournamentRating || "\u200b", inline: true},
-                    {name: "Last Played", value: tournamentDate || "\u200b", inline: true},
+                    {name: "Tournament Rating", value: tournamentRating || "\u200b", inline: true},
+                    {name: "\u200b", value: "\u200b", inline: true},
+                    {name: "Last Tournament Played", value: tournamentDate || "\u200b", inline: true},
+
+                    {name: "League Rating", value: leagueRating || "\u200b", inline: true},
+                    {name: "\u200b", value: "\u200b", inline: true},
+                    {name: "Last League Played", value: leagueDate || "\u200b", inline: true},
                 );
 
         if (club) embed.addFields({name: "Club", value: club ? `[${club}](${base}${clubRoute})` : "\u200b"});
