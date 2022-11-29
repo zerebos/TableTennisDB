@@ -28,14 +28,14 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("nctta")
         .setDescription("Gets information from the NCTTA!")
-        .addSubcommand(cmd => cmd.setName("player").setDescription("Gets information for a specific player!").addStringOption(opt => opt.setName("query").setDescription("Name of the player to find!").setRequired(true))),
+        .addSubcommand(cmd => cmd.setName("rating").setDescription("Gets the rating for a specific player!").addStringOption(opt => opt.setName("query").setDescription("Name of the player to find!").setRequired(true))),
 
     /** 
      * @param interaction {import("discord.js").CommandInteraction}
      */
     async execute(interaction) {
         const command = interaction.options.getSubcommand();
-        if (command === "player") return await this.rating(interaction);
+        if (command === "rating") return await this.rating(interaction);
     },
 
     /** 
@@ -67,10 +67,6 @@ module.exports = {
                     {name: "Joined", value: joinDate, inline: true},
                     {name: "Last Active", value: activeDate, inline: true},
                     {name: "Rating", value: player.rating.toString() || "\u200b", inline: true},
-
-                    {name: "Division", value: player.isWoman ? "Women's" : "Men's", inline: true},
-                    {name: "Active", value: player.Active ? "Yes" : "No", inline: true},
-                    {name: "Eligible", value: player.eligible ? "Yes" : "No", inline: true},
                 );
         
         await interaction.editReply({embeds: [embed]});
