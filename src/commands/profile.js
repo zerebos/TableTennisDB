@@ -37,7 +37,7 @@ module.exports = {
 
         const profileEmbed = new EmbedBuilder()
             .setColor("Blue")
-            .setAuthor({name: `${interaction.user.username}'s Profile`, iconURL: interaction.user.avatarURL()})
+            .setAuthor({name: `${user.username}'s Profile`, iconURL: user.avatarURL()})
             .addFields(
                 {name: "Forehand", value: profile.forehand ?? "\u200B", inline: true},
                 {name: "Backhand", value: profile.backhand ?? "\u200B", inline: true},
