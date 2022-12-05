@@ -105,17 +105,34 @@ module.exports = {
         await interaction.deferReply();
         const eventType = interaction.options.getString("type");
         const today = new Date();
-        const year = today.getFullYear();
-        const monthNum = today.getMonth() + 1;
-        const month = monthNum.toString().padStart(2, "0");
-        const week = getWeekNumber(today);
+        let year = today.getFullYear();
+        let monthNum = today.getMonth() + 1;
+        let month = monthNum.toString().padStart(2, "0");
+        let week = getWeekNumber(today);
         // https://www.ittf.com/wp-content/uploads/2022/08/2022_35_SEN_MS.html
         const url = `https://www.ittf.com/wp-content/uploads/${year}/${month}/${year}_${week}_SEN_${eventType}.html`;
         const html = await new Promise(resolve => {
             https.get(url).on("response", function(response) {
                 let body = "";
-                response.on("data", (chunk) => body += chunk);
-                response.on("end", () => resolve(body));
+
+                // Something went wrong, no update?
+                // Try last week's data
+                if (response.statusCode != 200) {
+                    today.setDate(today.getDate() - 7);
+                    year = today.getFullYear();
+                    monthNum = today.getMonth() + 1;
+                    month = monthNum.toString().padStart(2, "0");
+                    week = getWeekNumber(today);
+                    const backupUrl = `https://www.ittf.com/wp-content/uploads/${year}/${month}/${year}_${week}_SEN_${eventType}.html`;
+                    https.get(backupUrl).on("response", function(resp) {
+                        resp.on("data", (chunk) => body += chunk);
+                        resp.on("end", () => resolve(body));
+                    });
+                }
+                else {
+                    response.on("data", (chunk) => body += chunk);
+                    response.on("end", () => resolve(body));
+                }
             });
         });
         const $ = Cheerio.load(html);
@@ -129,6 +146,10 @@ module.exports = {
             const points = $(cells[3]).text().trim();
             return {rank, name, country, points};
         }).get();
+
+        if (!rankings.length) {
+            return await interaction.editReply("Something went wrong trying to get the rankings!");
+        }
 
         const entries = rankings.map(p => `**${p.name}** | ${p.country} | ${p.points}`);
         const p = new Paginator(interaction, entries);
