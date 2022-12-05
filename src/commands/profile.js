@@ -7,7 +7,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("profile")
         .setDescription("Share or edit your table tennis profile!")
-        .addSubcommand(cmd => cmd.setName("view").setDescription("View and share your profile!"))
+        .addSubcommand(cmd => cmd.setName("view").setDescription("View and share your profile!")
+                                .addUserOption((/** @type {import("@discordjs/builders").SlashCommandUserOption} */ option) =>
+                                option.setName("user")
+                                    .setDescription("Whose profile to view?")
+                                    .setRequired(false)))
         .addSubcommand(cmd => cmd.setName("edit").setDescription("Modify or setup your profile!")),
 
     /** 
@@ -19,8 +23,12 @@ module.exports = {
         if (command === "edit") return await this.edit(interaction);
     },
 
+    /** 
+     * @param interaction {import("discord.js").ChatInputCommandInteraction}
+     */
     async view(interaction) {
-        const profile = await profiles.get(interaction.user.id);
+        const user = interaction.options.getUser("user") ?? interaction.user;
+        const profile = await profiles.get(user.id);
 
         if (!profile) {
             const noEmbed = new EmbedBuilder().setColor("Red").setDescription("No profile found, please set one up using `/profile edit`!");
