@@ -20,7 +20,7 @@
     "cheerio": "^1.0.0-rc.12",
     "discord.js": "^14.3.0",
     "keyv": "^4.4.1",
-    "sqlite3": "^5.0.11",
+    "sqlite3": "^5.1.5",
     "string-similarity": "^4.0.4"
   }
 }
