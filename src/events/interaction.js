@@ -28,7 +28,10 @@ module.exports = {
         }
 
         const command = interaction.client.commands.get(commandName);
-        if (!command || !command[executor]) return;
+        if (!command || !command[executor]) {
+            console.error("Unrecognized interaction", commandName, executor, interaction);
+            return await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", ephemeral: true});
+        }
     
         try {
             await command[executor](interaction);
