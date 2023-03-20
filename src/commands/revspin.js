@@ -54,7 +54,7 @@ module.exports = {
     async stats(interaction, {query, category, results}) {
         const top = results[0];
         const passes = category ? top.similarity > 50 : top.similarity > 70;
-        if (!passes) return await interaction.reply({content: `Could not find a definitive result for \`${query}\`, please be more specific.`, ephemeral: true});
+        if (!passes) return await interaction.editReply({content: `Could not find a definitive result for \`${query}\`, please be more specific.`, ephemeral: true});
 
         const url = `https://revspin.net/${top.href}`;
         const html = await new Promise(resolve => {
