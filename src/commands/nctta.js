@@ -66,7 +66,7 @@ module.exports = {
                 .addFields(
                     {name: "Joined", value: joinDate, inline: true},
                     {name: "Last Active", value: activeDate, inline: true},
-                    {name: "Rating", value: player.rating.toString() || "\u200b", inline: true},
+                    {name: "Rating", value: player?.rating?.toString() || "\u200b", inline: true},
                 );
         
         await interaction.editReply({embeds: [embed]});
