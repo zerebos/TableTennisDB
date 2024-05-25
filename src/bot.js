@@ -8,7 +8,10 @@ require("dotenv").config();
 
 
 // Create a new client instance
-const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]});
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+    presence: {activities: [{name: "Table Tennis 🏓", type: 0}]}
+});
 
 client.commands = new Collection();
 
