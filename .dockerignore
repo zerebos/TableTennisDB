@@ -6,7 +6,7 @@
 
 **/.dockerignore
 **/.env
-**/.git
+# **/.git  # Currently keeping .git in order to show latest changes, to be changed in the future
 **/.gitignore
 **/docker-compose*
 **/Dockerfile*

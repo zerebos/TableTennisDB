@@ -1,5 +1,11 @@
 ARG NODE_VERSION=18
 FROM node:${NODE_VERSION}-alpine as base
+
+# Add git for showing latest changes in about
+# TODO: find another way
+RUN apk add --update git
+
+# Setup state for building
 WORKDIR /app
 ENV NODE_ENV production
 

@@ -2,7 +2,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {Routes} = require("discord.js");
 const {REST} = require("@discordjs/rest");
-const {clientId, token, guild} = require("../config.js");
+
+require("dotenv").config();
 
 const commands = [];
 const ownerCommands = [];
@@ -22,14 +23,14 @@ for (const file of commandFiles) {
     }
 }
 
-const rest = new REST({version: "10"}).setToken(token);
+const rest = new REST({version: "10"}).setToken(process.env.BOT_TOKEN);
 
-rest.put(Routes.applicationCommands(clientId), {body: commands})
+rest.put(Routes.applicationCommands(process.env.BOT_CLIENT_ID), {body: commands})
     .then(() => console.log("Successfully registered application commands."))
     .catch(console.error);
 
-if (ownerCommands.length && guild) {
-    rest.put(Routes.applicationGuildCommands(clientId, guild), {body: ownerCommands})
+if (ownerCommands.length && process.env.BOT_GUILD_ID) {
+    rest.put(Routes.applicationGuildCommands(process.env.BOT_CLIENT_ID, process.env.BOT_GUILD_ID), {body: ownerCommands})
         .then(() => console.log("Successfully registered guild commands."))
         .catch(console.error);
 }

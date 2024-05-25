@@ -5,7 +5,6 @@ const fs = require("fs");
 const path = require("path");
 
 const {promisify} = require("util");
-const {owner} = require("../../config");
 const saveFile = promisify(fs.writeFile);
 const loadFile = promisify(fs.readFile);
 const exists = promisify(fs.exists);
@@ -26,7 +25,7 @@ module.exports = {
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
     async execute(interaction) {
-        if (interaction.user.id !== owner) return await interaction.reply({content: "Sorry this command is only usable by the owner!", ephemeral: true});
+        if (interaction.user.id !== process.env.BOT_OWNER_ID) return await interaction.reply({content: "Sorry this command is only usable by the owner!", ephemeral: true});
 
         await interaction.reply("Updating cache for RevSpin.net");
 

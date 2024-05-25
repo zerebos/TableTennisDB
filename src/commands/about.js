@@ -3,13 +3,13 @@ const {promisify} = require("util");
 const exec = promisify(childProcess.exec);
 const path = require("path");
 const Keyv = require("keyv");
+// TODO: Create a better way to access the sqlite db without relative pathing
 const stats = new Keyv("sqlite://" + path.resolve(__dirname, "..", "..", "settings.sqlite3"), {namespace: "stats"});
 
 const {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require("discord.js");
 
-const config = require("../../config.js");
 
-const inviteLink = `https://discord.com/api/oauth2/authorize?client_id=${config.clientId}&permissions=${config.permissions}&scope=bot%20applications.commands`;
+const inviteLink = `https://discord.com/api/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&permissions=${process.env.BOT_PERMISSIONS || "0"}&scope=bot%20applications.commands`;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -28,7 +28,7 @@ module.exports = {
         aboutEmbed.setColor("Blue");
         const addField = (n,v,i) => aboutEmbed.addFields({name: n, value: v, inline: i ?? false});
 
-        if (config.description) addField(`About ${interaction.client.user.username}`, config.description);
+        if (process.env.BOT_DESCRIPTION) addField(`About ${interaction.client.user.username}`, process.env.BOT_DESCRIPTION);
 
         // git show -s -3 --format="%s (%cr)"
         try {
@@ -42,11 +42,11 @@ module.exports = {
             // Git not installed or something, should probably log it.
         }
 
-        const owner = await interaction.client.users.fetch(config.owner);
+        const owner = await interaction.client.users.fetch(process.env.BOT_OWNER_ID);
         if (owner) addField(`Created By`, owner.tag, true);
-        if (config.invite) addField(`Support Server`, `[Click Here!](${config.invite})`, true);
-        if (config.github) addField(`GitHub`, `[Click Here!](${config.github})`, true);
-        if (config.topgg) addField(`Top.gg`, `[Click Here!](https://top.gg/bot/${config.topgg})`, true);
+        if (process.env.SUPPORT_SERVER_URL) addField(`Support Server`, `[Click Here!](${process.env.SUPPORT_SERVER_URL})`, true);
+        if (process.env.GITHUB_URL) addField(`GitHub`, `[Click Here!](${process.env.GITHUB_URL})`, true);
+        if (process.env.TOPGG_ID) addField(`Top.gg`, `[Click Here!](https://top.gg/bot/${process.env.TOPGG_ID})`, true);
 
         let servingText = `${interaction.client.guilds.cache.size.toLocaleString()} Servers\n`;
         servingText += `${interaction.client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0).toLocaleString()} Users`;
