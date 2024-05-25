@@ -46,7 +46,7 @@ module.exports = {
             addField(`Latest Changes`, gitInfo.stdout.trim()); // To add bullets .split("\n").map(l => `- ${l}`).join("\n")
         }
         catch (err) {
-            // Git not installed or something, should probably log it.
+            console.error(err);
         }
 
 
