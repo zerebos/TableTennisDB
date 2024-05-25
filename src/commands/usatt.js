@@ -30,6 +30,9 @@ module.exports = {
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
     async rating(interaction) {
+        // TODO: Remove once rolling proxy is in place
+        const blockedEmbed = new EmbedBuilder().setColor("Red").setDescription("The USATT has blocked the bot from accessing their site. The bot developer is working on a potential workaround for this.");
+        return await interaction.reply({embeds: [blockedEmbed]});
         await interaction.deferReply();
         const query = interaction.options.getString("query").trim();
         const url = playerSearch(query);
@@ -81,6 +84,9 @@ module.exports = {
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
      async club(interaction) {
+        // TODO: Remove once rolling proxy is in place
+        const blockedEmbed = new EmbedBuilder().setColor("Red").setDescription("The USATT has blocked the bot from accessing their site. The bot developer is working on a potential workaround for this.");
+        return await interaction.reply({embeds: [blockedEmbed]});
         await interaction.deferReply();
         const query = interaction.options.getString("query").trim();
         const url = clubSearch(query);

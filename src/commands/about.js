@@ -23,15 +23,19 @@ module.exports = {
         await interaction.deferReply();
         const aboutEmbed = new EmbedBuilder();
 
-        const owner = await interaction.client.users.fetch(process.env.BOT_OWNER_ID);
-        if (owner) aboutEmbed.setAuthor({name: `Created by @${owner.username}`, iconURL: owner.displayAvatarURL(), url: process.env.BOT_OWNER_URL});
-
-        aboutEmbed.setFooter({text: "Made with discord.js", iconURL: "https://i.imgur.com/jt10lJI.png"});
-        aboutEmbed.setTimestamp(interaction.client.readyAt);
         aboutEmbed.setColor("Blue");
+        aboutEmbed.setAuthor({name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL()});
+        // TODO: I think it's overkill but re-evaluate later
+        // aboutEmbed.setImage(interaction.client.user.bannerURL());
+
+        const owner = await interaction.client.users.fetch(process.env.BOT_OWNER_ID);
+        if (owner) aboutEmbed.setFooter({text: `Created by @${owner.username}`, iconURL: owner.displayAvatarURL()});
+        aboutEmbed.setTimestamp(interaction.client.readyAt);
+
+
         const addField = (n,v,i) => aboutEmbed.addFields({name: n, value: v, inline: i ?? false});
 
-        if (process.env.BOT_DESCRIPTION) addField(`About ${interaction.client.user.username}`, process.env.BOT_DESCRIPTION);
+        if (process.env.BOT_DESCRIPTION) addField(`About`, process.env.BOT_DESCRIPTION);
 
         // git show -s -3 --format="%s (%cr)"
         try {

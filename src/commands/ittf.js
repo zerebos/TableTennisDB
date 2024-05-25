@@ -74,7 +74,7 @@ module.exports = {
         const today = new Date();
         const month = interaction.options.getNumber("month", false) ?? (today).getMonth();
         const monthName = months[month];
-        const url = `https://www.ittf.com/${today.getFullYear()}-event-calendar/`;
+        const url = `https://www.ittf.com/${today.getFullYear()}-events-calendar/`;
         const html = await new Promise(resolve => {
             https.get(url).on("response", function (response) {
                 let body = "";
