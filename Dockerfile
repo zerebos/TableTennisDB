@@ -27,4 +27,4 @@ RUN echo "module.exports = {};" > config.js
 RUN touch settings.sqlite3
 
 # Refresh commands when starting the bot
-CMD npm run clear && npm run deploy && npm run start
+CMD npm run validate && npm run clear && npm run deploy && npm run start
