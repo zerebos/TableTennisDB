@@ -1,6 +1,12 @@
 ARG NODE_VERSION=18
 FROM node:${NODE_VERSION}-alpine as base
 
+LABEL org.opencontainers.image.title "TableTennisDB"
+LABEL org.opencontainers.image.description "TableTennisDB looks up rankings and event information on ITTF and equipment ratings on RevSpin."
+LABEL org.opencontainers.image.url="https://github.com/rauenzi/TableTennisDB"
+LABEL org.opencontainers.image.source="https://github.com/rauenzi/TableTennisDB"
+LABEL org.opencontainers.image.licenses="MIT"
+
 # Add git for showing latest changes in about
 # TODO: find another way
 RUN apk add --update git

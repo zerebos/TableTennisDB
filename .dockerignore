@@ -12,7 +12,7 @@
 **/Dockerfile*
 **/node_modules
 **/*.sqlite3
-**/.eslintrc
+**/eslint.config.js
 .revspin
 LICENSE
 README.md
