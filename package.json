@@ -1,13 +1,12 @@
 {
   "name": "tabletennisdb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TableTennisDB looks up rankings and event information on ITTF and equipment ratings on RevSpin.",
   "main": "src/bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node .",
     "deploy": "node scripts/deploy-commands.js",
-    "clear": "node scripts/clear-commands.js",
     "validate": "node scripts/validate-env.js"
   },
   "author": "Zack Rauen",

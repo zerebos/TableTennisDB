@@ -1,9 +1,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const {Routes} = require("discord.js");
-const {REST} = require("@discordjs/rest");
+const {REST} = require("discord.js");
+const {API} = require("@discordjs/core");
 
-require("dotenv").config();
 
 const commands = [];
 const ownerCommands = [];
@@ -14,23 +13,20 @@ for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
 
-    if (command.owner) {
-        const data = command.data;
-        ownerCommands.push(data.toJSON());
-    }
-    else {
-        commands.push(command.data.toJSON());
-    }
+    // Separate owner commands to "privileged" guild
+    if (command.owner) ownerCommands.push(command.data.toJSON());
+    else commands.push(command.data.toJSON());
 }
 
 const rest = new REST({version: "10"}).setToken(process.env.BOT_TOKEN);
+const api = new API(rest);
 
-rest.put(Routes.applicationCommands(process.env.BOT_CLIENT_ID), {body: commands})
-    .then(() => console.log("Successfully registered application commands."))
+api.applicationCommands.bulkOverwriteGlobalCommands(process.env.BOT_CLIENT_ID, commands)
+    .then(result => console.log(`Successfully registered ${result.length} application commands.`))
     .catch(console.error);
 
-if (ownerCommands.length && process.env.BOT_GUILD_ID) {
-    rest.put(Routes.applicationGuildCommands(process.env.BOT_CLIENT_ID, process.env.BOT_GUILD_ID), {body: ownerCommands})
-        .then(() => console.log("Successfully registered guild commands."))
+if (process.env.BOT_GUILD_ID) {
+    api.applicationCommands.bulkOverwriteGuildCommands(process.env.BOT_CLIENT_ID, process.env.BOT_GUILD_ID, ownerCommands)
+        .then(result => console.log(`Successfully registered ${result.length} guild commands.`))
         .catch(console.error);
 }

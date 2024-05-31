@@ -5,3 +5,4 @@ legacy.sqlite3
 src/commands/revspin/cache
 .revspin
 .env
+test/
