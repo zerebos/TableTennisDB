@@ -6,3 +6,4 @@ src/commands/revspin/cache
 .revspin
 .env
 test/
+commands.json

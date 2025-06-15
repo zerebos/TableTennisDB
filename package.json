@@ -3,6 +3,7 @@
   "version": "1.0.1",
   "description": "TableTennisDB looks up rankings and event information on ITTF and equipment ratings on RevSpin.",
   "main": "src/bot.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node .",
@@ -12,9 +13,9 @@
   "author": "Zack Rauen",
   "license": "MIT",
   "devDependencies": {
-    "@eslint/js": "^9.3.0",
-    "eslint": "^9.3.0",
-    "globals": "^15.3.0"
+    "@zerebos/eslint-config": "file:../../eslint-configs/packages/base",
+    "@zerebos/eslint-config-typescript": "file:../../eslint-configs/packages/typescript",
+    "eslint": "^9.3.0"
   },
   "dependencies": {
     "@discordjs/core": "^2.0.1",
