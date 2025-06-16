@@ -1,21 +1,22 @@
-const path = require("path");
-const Keyv = require("keyv");
-const stats = new Keyv("sqlite://" + path.resolve(__dirname, "..", "..", "settings.sqlite3"), {namespace: "stats"});
+import {type Interaction, ChatInputCommandInteraction} from "discord.js";
+import type {CommandStats} from "../types";
+import {stats} from "../db";
 
-module.exports = {
+
+export default {
     name: "interactionCreate",
 
-    /** 
-     * @param interaction {import("discord.js").CommandInteraction}
-     */
-    async execute(interaction) {
-        let commandName = interaction.commandName;
-        let executor = "";
+    async execute(interaction: Interaction) {
+        let commandName = "";
+        let executor: "execute" | "autocomplete" | "button" | "modal" = "execute";
+
         if (interaction.isChatInputCommand()) {
+            commandName = interaction.commandName;
             executor = "execute";
             await this.addStat(interaction);
         }
         else if (interaction.isAutocomplete()) {
+            commandName = interaction.commandName;
             executor = "autocomplete";
         }
         else if (interaction.isButton()) {
@@ -28,31 +29,35 @@ module.exports = {
         }
 
         const command = interaction.client.commands.get(commandName);
-        if (!command || !command[executor]) {
+        if (!commandName || !command || !command[executor]) {
             console.error("Unrecognized interaction", commandName, executor, interaction);
-            return await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", ephemeral: true});
+            if (interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", ephemeral: true});
+            return;
         }
-    
+
         try {
             await command[executor](interaction);
         }
         catch (error) {
             console.error(error);
-            await interaction.reply({content: "There was an error while executing this command!", ephemeral: true});
+            if (interaction.isRepliable()) await interaction.reply({content: "There was an error while executing this command!", ephemeral: true});
         }
     },
 
-    /** 
-     * @param interaction {import("discord.js").ChatInputCommandInteraction}
-     */
-    async addStat(interaction) {
-        const key = interaction.guildId ?? interaction.client.user.id;
+    async addStat(interaction: ChatInputCommandInteraction) {
+        const key = interaction.guildId ?? interaction.client.user?.id;
         const name = interaction.commandName;
-        let data = {};
-        if (await stats.has(key)) data = await stats.get(key);
-        if (!data.commands) data.commands = {};
-        if (!data.commands[name]) data.commands[name] = 0;
-        data.commands[name] = data.commands[name] + 1;
+
+        // More type-safe approach
+        const existingData = await stats.get(key) as CommandStats | undefined;
+        const data: CommandStats = existingData ?? {commands: {}};
+
+        // Ensure commands object exists
+        data.commands ??= {};
+
+        // Increment command count
+        data.commands[name] = (data.commands[name] ?? 0) + 1;
+
         await stats.set(key, data);
     }
 };

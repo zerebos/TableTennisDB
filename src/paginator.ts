@@ -1,7 +1,15 @@
-const {EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require("discord.js");
+import {EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, ButtonInteraction, MessageComponentInteraction} from "discord.js";
 
-module.exports = class Paginator {
-    constructor(interaction, entries, itemsPerPage = 10) {
+export default class Paginator {
+    private interaction: CommandInteraction;
+    private entries: string[];
+    private itemsPerPage: number;
+    public embed: EmbedBuilder;
+    private numPages: number;
+    private currentPage: number = 1;
+    private buttonInteraction?: ButtonInteraction;
+
+    constructor(interaction: CommandInteraction, entries: string[], itemsPerPage: number = 10) {
         this.interaction = interaction;
         this.entries = entries;
         this.itemsPerPage = itemsPerPage;
@@ -11,7 +19,7 @@ module.exports = class Paginator {
     }
 
     get buttons() {
-        return new ActionRowBuilder()
+        return new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId("first")
@@ -40,7 +48,7 @@ module.exports = class Paginator {
         );
     }
 
-    getEntriesForPage(page) {
+    getEntriesForPage(page: number): string[] {
         const base = (page - 1) * this.itemsPerPage;
         return this.entries.slice(base, base + this.itemsPerPage);
     }
@@ -49,11 +57,11 @@ module.exports = class Paginator {
     async lastPage() {await this.showPage(this.numPages);}
     async nextPage() {await this.validatedShowPage(this.currentPage + 1);}
     async previousPage() {await this.validatedShowPage(this.currentPage - 1);}
-    async validatedShowPage(page) {
+    async validatedShowPage(page: number) {
         if (page > 0 && page <= this.numPages) await this.showPage(page);
     }
 
-    async showPage(page) {
+    async showPage(page: number) {
         this.currentPage = page;
         const currentEntries = this.getEntriesForPage(page);
         this.embed.setDescription(currentEntries.map((v, i) => `${i + 1 + ((this.currentPage - 1) * this.itemsPerPage)}. ${v}`).join("\n"));
@@ -66,12 +74,12 @@ module.exports = class Paginator {
         await this.showPage(1);
 
         const msg = await this.interaction.fetchReply();
-        const filter = i => i.user.id === this.interaction.user.id;
+        const filter = (i: MessageComponentInteraction) => i.user.id === this.interaction.user.id;
 
         const collector = msg.createMessageComponentCollector({filter, time: 60000});
 
         collector.on("collect", async i => {
-            this.buttonInteraction = i;
+            this.buttonInteraction = i as ButtonInteraction;
             if (i.customId === "first") await this.firstPage();
             if (i.customId === "last") await this.lastPage();
             if (i.customId === "previous") await this.previousPage();
@@ -83,4 +91,4 @@ module.exports = class Paginator {
             await this.interaction.editReply({components: []});
         });
     }
-};
+}

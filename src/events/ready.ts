@@ -1,7 +1,12 @@
-const fs = require("fs");
-const path = require("path");
+import type {Client} from "discord.js";
+import fs from "fs";
+import path from "path";
+import {fileURLToPath} from "url";
+import {promisify} from "util";
 
-const {promisify} = require("util");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const loadFile = promisify(fs.readFile);
 const exists = promisify(fs.exists);
 const mkdir = promisify(fs.mkdir);
@@ -9,17 +14,16 @@ const cacheFolder = path.resolve(__dirname, "..", "..", ".revspin");
 
 const categories = ["rubber", "blade", "pips", "table", "balls", "shoes", "sponge", "trainingdvd", "robot", "net", "premade"];
 
-module.exports = {
+export default {
     name: "ready",
     once: true,
-    async execute(client) {
-        console.log(`Ready! Logged in as ${client.user.tag}`);
+    async execute(client: Client) {
+        console.log(`Ready! Logged in as ${client.user?.tag}`);
         client.cpuUsage = process.cpuUsage();
-        client.readyAt = new Date();
         await this.__initializeCache(client);
     },
-    async __initializeCache(client) {
-        if (!(await exists(path.resolve(cacheFolder)))) return await mkdir(cacheFolder, () => {});
+    async __initializeCache(client: Client) {
+        if (!(await exists(path.resolve(cacheFolder)))) return await mkdir(cacheFolder);
         client.revspin = {};
         for (const category of categories) {
             const data = await loadFile(path.join(cacheFolder, `${category}.json`));

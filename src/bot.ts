@@ -1,41 +1,52 @@
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
+import {fileURLToPath, pathToFileURL} from "node:url";
 
-// Require the necessary discord.js classes
-const {Client, Collection, GatewayIntentBits} = require("discord.js");
+// Import the necessary discord.js classes
+import {Client, Collection, GatewayIntentBits} from "discord.js";
 
-require("dotenv").config();
+import "dotenv/config";
+import type {CommandModule} from "./types";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 // Create a new client instance
-const client = new Client({
+const client: Client & {commands?: Collection<string, object>} = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
     presence: {activities: [{name: "Table Tennis 🏓", type: 0}]}
 });
 
-client.commands = new Collection();
+client.commands = new Collection<string, CommandModule>();
 const commandsPath = path.join(__dirname, "commands");
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".ts"));
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
+    const command: CommandModule | {default: CommandModule} = await import(pathToFileURL(filePath).href);
+
+    // Handle both default and named exports
+    const commandData = "default" in command ? command.default : command;
+
     // Set a new item in the Collection
     // With the key as the command name and the value as the exported module
-    client.commands.set(command.data.name, command);
+    client.commands.set(commandData.data.name, commandData);
 }
 
 const eventsPath = path.join(__dirname, "events");
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".js"));
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".ts"));
 
 for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);
-    const event = require(filePath);
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args));
+    const event = await import(pathToFileURL(filePath).href);
+    // Handle both default and named exports
+    const eventData = event.default || event;
+    if (eventData.once) {
+        client.once(eventData.name, (...args) => eventData.execute(...args));
     }
     else {
-        client.on(event.name, (...args) => event.execute(...args));
+        client.on(eventData.name, (...args) => eventData.execute(...args));
     }
 }
 

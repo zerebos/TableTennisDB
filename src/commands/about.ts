@@ -1,25 +1,19 @@
-const childProcess = require("child_process");
-const {promisify} = require("util");
+import childProcess from "child_process";
+import {promisify} from "util";
+import {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction} from "discord.js";
+import type {CommandStats} from "../types";
+import {stats} from "../db";
+
+
 const exec = promisify(childProcess.exec);
-const path = require("path");
-const Keyv = require("keyv");
-// TODO: Create a better way to access the sqlite db without relative pathing
-const stats = new Keyv("sqlite://" + path.resolve(__dirname, "..", "..", "settings.sqlite3"), {namespace: "stats"});
-
-const {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require("discord.js");
-
-
 const inviteLink = `https://discord.com/api/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&permissions=${process.env.BOT_PERMISSIONS || "0"}&scope=bot%20applications.commands`;
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName("about")
         .setDescription("Gives some information about the bot"),
 
-    /** 
-     * @param interaction {import("discord.js").ChatInputCommandInteraction}
-     */
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
         const aboutEmbed = new EmbedBuilder();
 
@@ -28,12 +22,12 @@ module.exports = {
         // TODO: I think it's overkill but re-evaluate later
         // aboutEmbed.setImage(interaction.client.user.bannerURL());
 
-        const owner = await interaction.client.users.fetch(process.env.BOT_OWNER_ID);
+        const owner = await interaction.client.users.fetch(process.env.BOT_OWNER_ID!);
         if (owner) aboutEmbed.setFooter({text: `Created by @${owner.username}`, iconURL: owner.displayAvatarURL()});
         aboutEmbed.setTimestamp(interaction.client.readyAt);
 
 
-        const addField = (n,v,i) => aboutEmbed.addFields({name: n, value: v, inline: i ?? false});
+        const addField = (n: string, v: string, i?: boolean) => aboutEmbed.addFields({name: n, value: v, inline: i ?? false});
 
         if (process.env.BOT_DESCRIPTION) addField(`About`, process.env.BOT_DESCRIPTION);
 
@@ -78,7 +72,7 @@ module.exports = {
 
         const now = Date.now();
         const usage = process.cpuUsage(interaction.client.cpuUsage);
-        const result = 100 * ((usage.user + usage.system) / ((now - interaction.client.readyAt) * 1000));
+        const result = 100 * ((usage.user + usage.system) / ((now - interaction.client.readyAt.valueOf()) * 1000));
         const memUsage = process.memoryUsage().heapUsed / 1024 / 1024;
         let processText = `${memUsage.toFixed(2)} MB\n`;
         processText += `${result.toFixed(2)}% CPU`;
@@ -87,18 +81,18 @@ module.exports = {
 
         addField(`Emojis`, interaction.client.emojis.cache.size.toLocaleString(), true);
 
-        const cumulative = {};
+        const cumulative: CommandStats["commands"] = {};
         const values = interaction.client.guilds.cache.values();
         for (const guild of values) {
-            const guildStats = await stats.get(guild.id);
+            const guildStats = await stats.get(guild.id) as CommandStats | undefined;
             if (!guildStats || !guildStats.commands) continue;
             for (const commandName in guildStats.commands) {
                 if (!cumulative[commandName]) cumulative[commandName] = guildStats.commands[commandName];
                 else cumulative[commandName] = cumulative[commandName] + guildStats.commands[commandName];
             }
         }
-        
-        const dmStats = await stats.get(interaction.client.user.id);
+
+        const dmStats = await stats.get(interaction.client.user.id) as CommandStats | undefined;
         if (dmStats && dmStats.commands) {
             for (const commandName in dmStats.commands) {
                 if (!cumulative[commandName]) cumulative[commandName] = dmStats.commands[commandName];
@@ -109,8 +103,8 @@ module.exports = {
         const commandsRun = Object.values(cumulative).reduce((a, b) => a + b, 0).toLocaleString();
         addField(`Commands Run`, commandsRun, true);
 
-        addField(`Uptime`, humanReadableUptime(now - interaction.client.readyAt), true);
-        await interaction.editReply({embeds: [aboutEmbed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(`Invite ${interaction.client.user.username}`).setStyle(ButtonStyle.Link).setURL(inviteLink))]});
+        addField(`Uptime`, humanReadableUptime(now - interaction.client.readyAt.valueOf()), true);
+        await interaction.editReply({embeds: [aboutEmbed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder().setLabel(`Invite ${interaction.client.user.username}`).setStyle(ButtonStyle.Link).setURL(inviteLink))]});
     },
 };
 
@@ -119,7 +113,7 @@ const msInMinute = msInSecond * 60;
 const msInHour = msInMinute * 60;
 const msInDay = msInHour * 24;
 
-function humanReadableUptime(uptime) {
+function humanReadableUptime(uptime: number): string {
     let remainder = uptime;
     const days = Math.floor(uptime / msInDay);
     remainder = remainder - (days * msInDay);

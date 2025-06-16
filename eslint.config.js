@@ -4,5 +4,10 @@ import ts from "@zerebos/eslint-config-typescript";
 
 export default [
     ...node,
-    ...ts
+    ...ts,
+    {
+        rules: {
+            "no-console": "off",
+        }
+    }
 ];

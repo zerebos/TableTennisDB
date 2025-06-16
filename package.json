@@ -2,29 +2,30 @@
   "name": "tabletennisdb",
   "version": "1.0.1",
   "description": "TableTennisDB looks up rankings and event information on ITTF and equipment ratings on RevSpin.",
-  "main": "src/bot.js",
+  "main": "src/bot.ts",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node .",
-    "deploy": "node scripts/deploy-commands.js",
-    "validate": "node scripts/validate-env.js"
+    "start": "bun run --bun src/bot.ts",
+    "deploy": "bun run --bun scripts/deploy-commands.ts",
+    "validate": "bun run --bun scripts/validate-env.ts"
   },
   "author": "Zack Rauen",
   "license": "MIT",
   "devDependencies": {
+    "@types/string-similarity": "^4.0.2",
     "@zerebos/eslint-config": "file:../../eslint-configs/packages/base",
     "@zerebos/eslint-config-typescript": "file:../../eslint-configs/packages/typescript",
-    "eslint": "^9.3.0"
+    "eslint": "^9.29.0"
   },
   "dependencies": {
-    "@discordjs/core": "^2.0.1",
-    "@discordjs/rest": "^2.3.0",
-    "@keyv/sqlite": "^3.6.7",
-    "cheerio": "^1.0.0-rc.12",
-    "discord.js": "^14.15.2",
-    "dotenv": "^16.4.5",
-    "keyv": "^4.5.4",
+    "@discordjs/core": "^2.1.0",
+    "@discordjs/rest": "^2.5.0",
+    "@keyv/sqlite": "^4.0.4",
+    "cheerio": "^1.1.0",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
+    "keyv": "^5.3.4",
     "sqlite3": "^5.1.7",
     "string-similarity": "^4.0.4"
   }

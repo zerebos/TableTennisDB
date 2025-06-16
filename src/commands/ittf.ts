@@ -1,7 +1,7 @@
-const {SlashCommandBuilder, EmbedBuilder} = require("discord.js");
-const https = require("https");
-const Cheerio = require("cheerio");
-const Paginator = require("../paginator");
+import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction} from "discord.js";
+import https from "https";
+import {load} from "cheerio";
+import Paginator from "../paginator";
 
 const eventChoices = [
     {name: "Men's Singles", value: "MS"},
@@ -18,7 +18,7 @@ const months = ["January", "February", "March", "April", "May", "June", "July", 
 const monthChoices = months.map((m, i) => ({name: m, value: i}));
 
 // https://stackoverflow.com/questions/6117814/get-week-of-year-in-javascript-like-in-php
-function getWeekNumber(d) {
+function getWeekNumber(d: Date) {
 
     // Copy date so don't modify original
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -31,10 +31,10 @@ function getWeekNumber(d) {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
 
     // Calculate full weeks to nearest Thursday
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return Math.ceil((((d.valueOf() - yearStart.valueOf()) / 86400000) + 1) / 7);
 }
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName("ittf")
         .setDescription("Gets information from the ITTF website!")
@@ -57,35 +57,35 @@ module.exports = {
                         .addChoices(...eventChoices))
         ),
 
-    /** 
+    /**
      * @param interaction {import("discord.js").CommandInteraction}
      */
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         const command = interaction.options.getSubcommand();
         if (command === "calendar") return await this.calendar(interaction);
         if (command === "rankings") return await this.rankings(interaction);
     },
 
-    /** 
+    /**
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
-    async calendar(interaction) {
+    async calendar(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
         const today = new Date();
         const month = interaction.options.getNumber("month", false) ?? (today).getMonth();
         const monthName = months[month];
         const url = `https://www.ittf.com/${today.getFullYear()}-events-calendar/`;
-        const html = await new Promise(resolve => {
+        const html = await new Promise<string>(resolve => {
             https.get(url).on("response", function (response) {
                 let body = "";
                 response.on("data", (chunk) => body += chunk);
                 response.on("end", () => resolve(body));
             });
         });
-        const $ = Cheerio.load(html);
+        const $ = load(html);
         const content = $(".content");
         const ul = $(content.find("ul").get(month));
-        const description = ul.find("li").map((index, element) => {
+        const description = ul.find("li").map((_, element) => {
             const el = $(element);
             const children = el.children("a");
             if (!children.length) return `- ${el.text()}`.trim();
@@ -98,10 +98,10 @@ module.exports = {
         await interaction.editReply({embeds: [eventEmbed]});
     },
 
-    /** 
+    /**
      * @param interaction {import("discord.js").ChatInputCommandInteraction}
      */
-    async rankings(interaction) {
+    async rankings(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
         const eventType = interaction.options.getString("type");
         const today = new Date();
@@ -111,7 +111,7 @@ module.exports = {
         let week = getWeekNumber(today);
         // https://www.ittf.com/wp-content/uploads/2022/08/2022_35_SEN_MS.html
         const url = `https://www.ittf.com/wp-content/uploads/${year}/${month}/${year}_${week}_SEN_${eventType}.html`;
-        const html = await new Promise(resolve => {
+        const html = await new Promise<string>(resolve => {
             https.get(url).on("response", function(response) {
                 let body = "";
 
@@ -135,10 +135,10 @@ module.exports = {
                 }
             });
         });
-        const $ = Cheerio.load(html);
+        const $ = load(html);
         const list = $("tbody");
         // console.log(list.children);
-        const rankings = list.children().filter((i, el) => $(el).hasClass("rrow")).map((i, el) => {
+        const rankings = list.children().filter((_, el) => $(el).hasClass("rrow")).map((_, el) => {
             const cells = $(el).find("td");
             const rank = $(cells[0]).text().trim();
             const name = $(cells[1]).text().trim();
@@ -153,7 +153,7 @@ module.exports = {
 
         const entries = rankings.map(p => `**${p.name}** | ${p.country} | ${p.points}`);
         const p = new Paginator(interaction, entries);
-        p.embed = p.embed.setColor("White").setAuthor({name: `${eventChoices.find(c => c.value === eventType).name} for Week ${week} of ${year}`, url: url, iconURL: "https://ranking.ittf.com/img/logos/ittf.png"});
+        p.embed = p.embed.setColor("White").setAuthor({name: `${eventChoices.find(c => c.value === eventType)!.name} for Week ${week} of ${year}`, url: url, iconURL: "https://ranking.ittf.com/img/logos/ittf.png"});
         await p.paginate();
     },
 };

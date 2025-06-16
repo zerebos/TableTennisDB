@@ -1,5 +1,4 @@
-require("dotenv").config();
-
+import "dotenv/config";
 
 const snowflakeRegex = /^[0-9]{15,}$/;
 
