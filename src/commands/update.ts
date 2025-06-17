@@ -1,4 +1,4 @@
-import {SlashCommandBuilder, ChatInputCommandInteraction, Client} from "discord.js";
+import {SlashCommandBuilder, ChatInputCommandInteraction, Client, MessageFlags} from "discord.js";
 import https from "https";
 import {load} from "cheerio";
 import fs from "fs";
@@ -25,7 +25,7 @@ export default {
         .setDescription("Updates the RevSpin cache!"),
 
     async execute(interaction: ChatInputCommandInteraction) {
-        if (interaction.user.id !== process.env.BOT_OWNER_ID) return await interaction.reply({content: "Sorry this command is only usable by the owner!", ephemeral: true});
+        if (interaction.user.id !== process.env.BOT_OWNER_ID) return await interaction.reply({content: "Sorry this command is only usable by the owner!", flags: MessageFlags.Ephemeral});
 
         await interaction.reply("Updating cache for RevSpin.net");
 

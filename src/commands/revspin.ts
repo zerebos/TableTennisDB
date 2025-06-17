@@ -1,4 +1,4 @@
-import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder, ChatInputCommandInteraction} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder, ChatInputCommandInteraction, InteractionContextType, ApplicationIntegrationType} from "discord.js";
 import Similarity from "string-similarity";
 import https from "https";
 import {load} from "cheerio";
@@ -9,7 +9,9 @@ export default {
         .setName("revspin")
         .setDescription("Gets information from RevSpin.net!")
         .addSubcommand(cmd => cmd.setName("search").setDescription("Searches revspin for equipment").addStringOption(opt => opt.setName("query").setDescription("What to search for, can also include a category!").setRequired(true)))
-        .addSubcommand(cmd => cmd.setName("stats").setDescription("Gets stats for the equipment from RevSpin").addStringOption(opt => opt.setName("query").setDescription("What to search for, can also include a category!").setRequired(true))),
+        .addSubcommand(cmd => cmd.setName("stats").setDescription("Gets stats for the equipment from RevSpin").addStringOption(opt => opt.setName("query").setDescription("What to search for, can also include a category!").setRequired(true)))
+        .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
 
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();

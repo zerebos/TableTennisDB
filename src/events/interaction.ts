@@ -1,4 +1,4 @@
-import {type Interaction, ChatInputCommandInteraction} from "discord.js";
+import {type Interaction, ChatInputCommandInteraction, MessageFlags} from "discord.js";
 import type {CommandStats} from "../types";
 import {stats} from "../db";
 
@@ -31,7 +31,7 @@ export default {
         const command = interaction.client.commands.get(commandName);
         if (!commandName || !command || !command[executor]) {
             console.error("Unrecognized interaction", commandName, executor, interaction);
-            if (interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", ephemeral: true});
+            if (interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", flags: MessageFlags.Ephemeral});
             return;
         }
 
@@ -40,7 +40,7 @@ export default {
         }
         catch (error) {
             console.error(error);
-            if (interaction.isRepliable()) await interaction.reply({content: "There was an error while executing this command!", ephemeral: true});
+            if (interaction.isRepliable()) await interaction.reply({content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral});
         }
     },
 

@@ -1,6 +1,22 @@
-import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction} from "discord.js";
-import {profiles} from "../db";
+import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags} from "discord.js";
+import {profiles, userInstallNotices} from "../db";
+import type {ProfileData} from "../types";
 
+
+function createProfileEmbed(user: {username: string, avatarURL: () => (string | null)}, profile: ProfileData) {
+    return new EmbedBuilder()
+        .setColor("Blue")
+        .setAuthor({name: `${user.username}'s Profile`, iconURL: user.avatarURL()!})
+        .addFields(
+            {name: "Forehand", value: profile.forehand ?? "\u200B", inline: true},
+            {name: "Backhand", value: profile.backhand ?? "\u200B", inline: true},
+            {name: "Blade", value: profile.blade ?? "\u200B", inline: true},
+
+            {name: "Strengths", value: profile.strengths ?? "\u200B", inline: true},
+            {name: "Weaknesses", value: profile.weaknesses ?? "\u200B", inline: true},
+            {name: "Playstyle", value: profile.playstyle ?? "\u200B", inline: true},
+        );
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -24,62 +40,33 @@ export default {
 
     async view(interaction: ChatInputCommandInteraction) {
         const user = interaction.options.getUser("user") ?? interaction.user;
-        const profile = await profiles.get(user.id);
+        const profile = await profiles.get(user.id) as ProfileData | undefined;
 
         if (!profile) {
             const noEmbed = new EmbedBuilder().setColor("Red").setDescription("No profile found, please set one up using `/profile edit`!");
             return await interaction.reply({embeds: [noEmbed]});
         }
 
-        const profileEmbed = new EmbedBuilder()
-            .setColor("Blue")
-            .setAuthor({name: `${user.username}'s Profile`, iconURL: user.avatarURL()!})
-            .addFields(
-                {name: "Forehand", value: profile.forehand ?? "\u200B", inline: true},
-                {name: "Backhand", value: profile.backhand ?? "\u200B", inline: true},
-                {name: "Blade", value: profile.blade ?? "\u200B", inline: true},
-
-                {name: "Strengths", value: profile.strengths ?? "\u200B", inline: true},
-                {name: "Weaknesses", value: profile.weaknesses ?? "\u200B", inline: true},
-                {name: "Playstyle", value: profile.playstyle ?? "\u200B", inline: true},
-            );
-
-        await interaction.reply({embeds: [profileEmbed]});
+        await interaction.reply({embeds: [createProfileEmbed(user, profile)]});
+        const hasShownNotice = await userInstallNotices.get(interaction.user.id);
+        if (!hasShownNotice) {
+            await userInstallNotices.set(interaction.user.id, true);
+            await interaction.followUp({content: `**New!** Add TableTennisDB to your account for DM access and cross-server profiles!\n\nClick my profile → "Add App" → "Add to My Apps"`, flags: MessageFlags.Ephemeral});
+        }
     },
 
     async edit(interaction: ChatInputCommandInteraction) {
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId("profile-save")
-                    .setLabel("Save")
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId("profile-gear")
-                    .setLabel("Edit Gear")
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId("profile-skills")
-                    .setLabel("Edit Skills")
-                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId("profile-save").setLabel("Save").setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId("profile-gear").setLabel("Edit Gear").setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId("profile-skills").setLabel("Edit Skills").setStyle(ButtonStyle.Secondary),
         );
 
         const profile = await profiles.get(interaction.user.id) ?? {};
-
-        const profileEmbed = new EmbedBuilder()
-            .setColor("Blue")
-            .setAuthor({name: `${interaction.user.username}'s Profile`, iconURL: interaction.user.avatarURL()!})
-            .addFields(
-                {name: "Forehand", value: profile.forehand ?? "\u200B", inline: true},
-                {name: "Backhand", value: profile.backhand ?? "\u200B", inline: true},
-                {name: "Blade", value: profile.blade ?? "\u200B", inline: true},
-
-                {name: "Strengths", value: profile.strengths ?? "\u200B", inline: true},
-                {name: "Weaknesses", value: profile.weaknesses ?? "\u200B", inline: true},
-                {name: "Playstyle", value: profile.playstyle ?? "\u200B", inline: true},
-            );
-
-        await interaction.reply({embeds: [profileEmbed], components: [row], ephemeral: true});
+        const profileEmbed = createProfileEmbed(interaction.user, profile);
+        profileEmbed.setFooter({text: "💡 Suggest profile features on Discord or GitHub - See /about for links."});
+        await interaction.reply({embeds: [profileEmbed], components: [row], flags: MessageFlags.Ephemeral});
     },
 
     /**

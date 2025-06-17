@@ -1,71 +1,148 @@
-# TableTennisDB - [Invite Me](https://discordapp.com/oauth2/authorize?client_id=317185553349214209&scope=bot&permissions=126016)
-[![Discord Bots](https://discordbots.org/api/widget/317185553349214209.svg)](https://discordbots.org/bot/317185553349214209)
+# TableTennisDB 🏓
 
-**Bot Prefix - `!`**
+[![Discord Bots](https://top.gg/api/widget/317185553349214209.svg)](https://top.gg/bot/317185553349214209)
 
-For support you can visit [this discord server](https://discord.gg/TyFxKer).
+A comprehensive Discord bot for table tennis enthusiasts featuring player rankings, equipment specifications, and personal profiles.
 
+## 🚀 Quick Start
 
-# Features
-The main features of this bot include information lookup such as equipment and stats search and world ranking lookup. It also has some more useful features like basic moderation and fun stuff like reactions.
-![Help](https://i.zackrauen.com/dn9i1i.png)
+### 🌐 Add to Account (Recommended)
+**New!** Install TableTennisDB to your Discord account for DM access and cross-server functionality:
 
-## Equipment Stats
+[**Add to Your Account**](https://discord.com/oauth2/authorize?client_id=317185553349214209&integration_type=1&scope=applications.commands)
 
-### Loose Matching
+### 🔗 Add to Server (Traditional)
+Add TableTennisDB to your Discord server:
 
-Allows you to look up equipment stats without specifying what type it is (blade, rubber, etc).
+[**Add to Server**](https://discord.com/oauth2/authorize?client_id=317185553349214209&permissions=2147863616&scope=bot%20applications.commands)
 
-![Stats](https://i.zackrauen.com/emEqoM.png)
+### 💬 Support
+Need help? Join our [support server](https://discord.gg/MZ8hrES9Dd) for assistance and updates.
 
-Will also give you best options from each category if it isn't sure.
-![NoResults](https://i.zackrauen.com/yLfujM.png)
+## ✨ Features
 
-### Category Limiting
+### 👤 Personal Profiles
+Create and manage your table tennis profile with equipment and playing style information:
+- **Equipment tracking** - Forehand rubber, backhand rubber, blade
+- **Playing style** - Strengths, weaknesses, playstyle description
+- **Cross-server sync** - Your profile works across all servers
+- **DM access** - Edit and view profiles in direct messages
 
-Lets you use an optional subcommand to specify the type of equipment.
+```
+/profile edit          # Create or edit your profile
+/profile view          # View your profile
+/profile view @user    # View another user's profile
+```
 
-![Subcommands](https://i.zackrauen.com/2n9DOF.png)
+### 📊 Player Rankings & Information
+Look up current ITTF rankings and player statistics:
+- **Player lookup** - Search for any ITTF-ranked player
+- **Current rankings** - View top players in various categories
+- **Tournament data** - Information about major tournaments
 
-And it will retrieve the results just like before.
-![Net](https://i.zackrauen.com/Zw4fVL.png)
+```
+/player Fan Zhendong               # Look up a specific player
+/rankings                          # View current top rankings
+/tournament World Championships    # Tournament information
+```
 
-It will also limit failed lookups to that category.
+### 🏓 Equipment Database
+Comprehensive equipment specifications from RevSpin:
+- **Rubber specifications** - Speed, spin, control ratings
+- **Blade information** - Weight, layers, playing characteristics
+- **Ball specifications** - Official tournament balls
+- **Autocomplete search** - Fast and accurate equipment lookup
 
-![Failed](https://i.zackrauen.com/Mi2h8Z.png)
+```
+/rubber Tenergy 05     # Look up rubber specifications
+/blade Viscaria        # Look up blade information
+/balls DHS DJ40+       # Ball specifications
+```
 
+### 🔍 Smart Search
+Advanced search capabilities with fuzzy matching:
+- **Partial name matching** - Find equipment even with incomplete names
+- **Category suggestions** - Get recommendations when exact matches aren't found
+- **Autocomplete** - Suggestions as you type
 
-## Equipment Lookup
+## 🎯 User Installation Benefits
 
-If you don't remember exactly what something was called, or you heard a piece of equipment in passing, you can just search for it with TableTennisDB.
+When you **Add to Account**, you get:
 
-![Search](https://i.zackrauen.com/gwB8ai.png)
-Not only does it give you the best matches, it tells you how well it matched.
+- ✅ **DM Access** - Use all commands in direct messages
+- ✅ **Cross-Server Profiles** - Your profile works everywhere
+- ✅ **Personal Use** - Access bot features without server installation
+- ✅ **Mobile Friendly** - Perfect for on-the-go equipment research
+- ✅ **Privacy** - Use commands privately without server spam
 
-## World Rankings
+Perfect for:
+- 🛒 Equipment research while shopping online
+- 💬 Sharing player stats in private conversations
+- 🏓 Quick lookups during tournaments or practice
+- 📱 Mobile access when you need information fast
 
-With TableTennisDB you can view all the world rankings available from the [ITTF](https://www.ittf.com/). Getting the current world rankings is as simple as doing `!rankings`
+## 📋 Command Reference
 
-![Rankings](https://i.zackrauen.com/9B4DbT.png)
+### Profile Commands
+- `/profile view` - View your profile
+- `/profile view @user` - View another user's profile
+- `/profile edit` - Create or edit your profile
 
-The command yields a paginated list that you can traverse through by reacting.
+### Player & Rankings
+- `/player <name>` - Look up player rankings and information
+- `/rankings` - View current ITTF rankings
+- `/tournament <name>` - Tournament information and results
 
-Since the ITTF also has older data, the bot can also search by certain parameters. Namely gender, age group, month, and year. More info on how to use that from the bot itself:
+### Equipment Lookup
+- `/rubber <name>` - Rubber specifications and ratings
+- `/blade <name>` - Blade specifications and characteristics
+- `/balls <name>` - Ball information and specifications
 
-![RankingsHelp](https://i.zackrauen.com/fOXb7s.png)
+### Utility
+- `/help` - Comprehensive help and command guide
+- `/about` - Bot information and statistics
+- `/ping` - Check bot status and response time
 
-Example usage:
+## 🛠️ Technology Stack
 
-![RankingsWomen](https://i.zackrauen.com/HPOt84.png)
+- **Discord.js** - Modern Discord API wrapper
+- **TypeScript** - Type-safe development
+- **Bun** - Fast JavaScript runtime
+- **RevSpin API** - Equipment database integration
+- **ITTF Data** - Official ranking information
 
-## Reactions
+## 📈 Statistics
 
-This module allows the bot to react either via message or emoji reactions to certain keywords. This can be set up by anyone in the server with manage messages permission, but the reactions will only work on that server, they do not carry over. Here's a couple good examples:
+TableTennisDB serves thousands of table tennis players across multiple Discord servers, providing:
+- Real-time ITTF ranking data
+- Comprehensive equipment database
+- Cross-platform profile management
+- Fast, reliable command execution
 
-### Reaction Text
-![Reaction](https://i.zackrauen.com/dzGtT5.png)
+## 🔒 Privacy & Data
 
-### Reaction Emoji
-![ReactionEmoji](https://i.zackrauen.com/KGC5Em.png)
+- Profile data is securely stored
+- Data is only used for bot functionality
+- Cross-server profile sync respects user privacy
+- No data is shared with third parties
 
-Of course these can be combined and the bot can respond via a message as well as an unlimited number of emojis.
+## 🤝 Contributing
+
+TableTennisDB is actively maintained and updated. For bug reports, feature requests, or contributions:
+
+1. Join our [support server](https://discord.gg/MZ8hrES9Dd)
+2. Report issues through Discord or GitHub
+3. Suggest new features and improvements
+4. Submit pull requests for improvements
+
+We welcome contributions from the table tennis and Discord bot communities!
+
+## 📄 License
+
+TableTennisDB is open source software licensed under the [MIT License](LICENSE).
+
+---
+
+**Get started today!** Add TableTennisDB to your account and discover the ultimate table tennis companion for Discord.
+
+[**Add to Account**](https://discord.com/oauth2/authorize?client_id=317185553349214209&integration_type=1&scope=applications.commands) • [**Add to Server**](https://discord.com/oauth2/authorize?client_id=317185553349214209&permissions=2147863616&scope=bot%20applications.commands) • [**Support Server**](https://discord.gg/MZ8hrES9Dd)

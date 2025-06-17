@@ -1,6 +1,6 @@
 // TODO: remove this override after fixing types
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
 import https from "https";
 
 
@@ -56,7 +56,10 @@ const getJSON = async (url: string, validator = (c: any) => c) => {
             path: parsed.pathname + parsed.search,
             headers: {
                 "accept": "application/json",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0"
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
+                "host": "wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net",
+                "origin": "https://worldtabletennis.com",
+                "referer": "https://worldtabletennis.com/",
             }
         }).on("response", function (response) {
             let body = "";
@@ -64,6 +67,8 @@ const getJSON = async (url: string, validator = (c: any) => c) => {
             response.on("end", () => resolve(body));
         });
     });
+
+    // console.log(rawResponse);
 
     let json;
     try {
@@ -89,7 +94,9 @@ export default {
                         .setDescription("How many results to view")
                         .setRequired(false)
                         .setMinValue(1).setMaxValue(8))
-        ),
+        )
+        .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
 
     /**
      * @param interaction {import("discord.js").CommandInteraction}
@@ -109,7 +116,7 @@ export default {
 
         // Get most recent/current event ID
         const isValidEvent = (json: any[]) => json.length && json[0]?.eventId;
-        const eventInfo = await getJSON(`https://wttapigateway-new.azure-api.net/prod/api/cms/GetLiveEventWithKey?Key=live_results_event_id`, isValidEvent);
+        const eventInfo = await getJSON(`https://wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net/api/cms/GetLiveEventWithKey?Key=live_results_event_id`, isValidEvent);
         if (!eventInfo) {
             const failEmbed = new EmbedBuilder().setColor("Red").setDescription("Could not get current event info!");
             return await interaction.editReply({embeds: [failEmbed]});
@@ -118,9 +125,9 @@ export default {
 
         // Use event info to get results from event
         const isValidResult = (json: any[]) => json.length && json[0]?.match_card;
-        const results = await getJSON(`https://wttapigateway-new.azure-api.net/prod/api/cms/GetOfficialResult?EventId=${eventInfo[0].eventId}&include_match_card=true&take=10`, isValidResult);
+        const results = await getJSON(`https://wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net/api/cms/GetOfficialResult?EventId=${eventInfo[0].eventId}&include_match_card=true&take=10`, isValidResult);
         if (!results) {
-            const failEmbed = new EmbedBuilder().setColor("Red").setDescription("Could not get recent results!");
+            const failEmbed = new EmbedBuilder().setColor("Blue").setDescription("Current event has not yet started!");
             return await interaction.editReply({embeds: [failEmbed]});
         }
 

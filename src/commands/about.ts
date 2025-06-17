@@ -1,17 +1,20 @@
 import childProcess from "child_process";
 import {promisify} from "util";
-import {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
 import type {CommandStats} from "../types";
 import {stats} from "../db";
 
 
 const exec = promisify(childProcess.exec);
-const inviteLink = `https://discord.com/api/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&permissions=${process.env.BOT_PERMISSIONS || "0"}&scope=bot%20applications.commands`;
+const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&permissions=${process.env.BOT_PERMISSIONS || "0"}&scope=bot%20applications.commands`;
+const userInviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&integration_type=1&scope=applications.commands`;
 
 export default {
     data: new SlashCommandBuilder()
         .setName("about")
-        .setDescription("Gives some information about the bot"),
+        .setDescription("Gives some information about the bot")
+        .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
 
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
@@ -19,8 +22,7 @@ export default {
 
         aboutEmbed.setColor("Blue");
         aboutEmbed.setAuthor({name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL()});
-        // TODO: I think it's overkill but re-evaluate later
-        // aboutEmbed.setImage(interaction.client.user.bannerURL());
+        aboutEmbed.setDescription("**🆕 Now user-installable!** Add to your account for DM access and cross-server profiles.");
 
         const owner = await interaction.client.users.fetch(process.env.BOT_OWNER_ID!);
         if (owner) aboutEmbed.setFooter({text: `Created by @${owner.username}`, iconURL: owner.displayAvatarURL()});
@@ -104,7 +106,15 @@ export default {
         addField(`Commands Run`, commandsRun, true);
 
         addField(`Uptime`, humanReadableUptime(now - interaction.client.readyAt.valueOf()), true);
-        await interaction.editReply({embeds: [aboutEmbed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(new ButtonBuilder().setLabel(`Invite ${interaction.client.user.username}`).setStyle(ButtonStyle.Link).setURL(inviteLink))]});
+        await interaction.editReply({
+            embeds: [aboutEmbed],
+            components: [
+                new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder().setLabel(`Invite ${interaction.client.user.username}`).setStyle(ButtonStyle.Link).setURL(inviteLink).setEmoji("🔗"),
+                    new ButtonBuilder().setLabel("Add to Account").setStyle(ButtonStyle.Link).setURL(userInviteLink).setEmoji("📱")
+                )
+            ]
+        });
     },
 };
 

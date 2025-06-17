@@ -1,4 +1,4 @@
-import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
 import https from "https";
 import {load} from "cheerio";
 import Paginator from "../paginator";
@@ -55,7 +55,9 @@ export default {
                         .setDescription("Which ranking type to view")
                         .setRequired(true)
                         .addChoices(...eventChoices))
-        ),
+        )
+        .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
 
     /**
      * @param interaction {import("discord.js").CommandInteraction}

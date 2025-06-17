@@ -8,6 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "bun run --bun src/bot.ts",
     "deploy": "bun run --bun scripts/deploy-commands.ts",
+    "clear": "bun run --bun scripts/deploy-commands.ts --clear",
     "validate": "bun run --bun scripts/validate-env.ts"
   },
   "author": "Zack Rauen",
@@ -26,7 +27,7 @@
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
     "keyv": "^5.3.4",
-    "sqlite3": "^5.1.7",
     "string-similarity": "^4.0.4"
-  }
+  },
+  "overrides": { "sqlite3": { "prebuild-install": "7.1.3" } }
 }

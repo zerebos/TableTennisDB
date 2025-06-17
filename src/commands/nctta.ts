@@ -1,4 +1,4 @@
-import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
 import https from "https";
 import type {NCTTAPlayer} from "../types";
 
@@ -9,7 +9,9 @@ export default {
     data: new SlashCommandBuilder()
         .setName("nctta")
         .setDescription("Gets information from the NCTTA!")
-        .addSubcommand(cmd => cmd.setName("rating").setDescription("Gets the rating for a specific player!").addStringOption(opt => opt.setName("query").setDescription("Name of the player to find!").setRequired(true))),
+        .addSubcommand(cmd => cmd.setName("rating").setDescription("Gets the rating for a specific player!").addStringOption(opt => opt.setName("query").setDescription("Name of the player to find!").setRequired(true)))
+        .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
 
     /**
      * @param interaction {import("discord.js").CommandInteraction}

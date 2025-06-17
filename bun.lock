@@ -11,7 +11,6 @@
         "discord.js": "^14.19.3",
         "dotenv": "^16.5.0",
         "keyv": "^5.3.4",
-        "sqlite3": "^5.1.7",
         "string-similarity": "^4.0.4",
       },
       "devDependencies": {

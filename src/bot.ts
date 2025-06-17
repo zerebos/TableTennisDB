@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 // Create a new client instance
 const client: Client & {commands?: Collection<string, object>} = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-    presence: {activities: [{name: "Table Tennis 🏓", type: 0}]}
+    presence: {activities: [{name: "🆕 Now user-installable!", type: 4}]}
 });
 
 client.commands = new Collection<string, CommandModule>();

@@ -1,5 +1,4 @@
-ARG NODE_VERSION=20
-FROM node:${NODE_VERSION}-alpine as base
+FROM oven/bun:alpine as base
 
 LABEL org.opencontainers.image.title "TableTennisDB"
 LABEL org.opencontainers.image.description "TableTennisDB looks up rankings and event information on ITTF and equipment ratings on RevSpin."
@@ -8,19 +7,15 @@ LABEL org.opencontainers.image.source="https://github.com/zerebos/TableTennisDB"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Add git for showing latest changes in about
-# TODO: find another way
-RUN apk add --update git
+RUN apk add --no-cache git
 
 # Setup state for building
 WORKDIR /app
-ENV NODE_ENV production
 
 # Install dependencies and allow cachine
-COPY --link package.json package-lock.json ./
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+COPY --link package.json bun.lock ./
+RUN --mount=type=cache,target=/root/.bun \
+    bun install --production --frozen-lockfile
 
 # Use the same base container because there's not much we can reduce
 FROM base as runner
@@ -29,8 +24,9 @@ FROM base as runner
 COPY --link . /app
 
 # Setup some default files
-RUN touch settings.sqlite3
-RUN mkdir .revspin
+RUN touch settings.sqlite3 && mkdir -p .revspin
+
+USER bun
 
 # Refresh commands when starting the bot
-CMD npm run validate && npm run deploy && npm run start
+CMD ["sh", "-c", "bun run validate && bun run deploy && bun run start"]
