@@ -26,7 +26,5 @@ COPY --link . /app
 # Setup some default files
 RUN touch settings.sqlite3 && mkdir -p .revspin
 
-USER bun
-
 # Refresh commands when starting the bot
 CMD ["sh", "-c", "bun run validate && bun run deploy && bun run start"]
