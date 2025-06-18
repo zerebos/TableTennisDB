@@ -31,7 +31,7 @@ export default {
         const command = interaction.client.commands.get(commandName);
         if (!commandName || !command || !command[executor]) {
             console.error("Unrecognized interaction", commandName, executor, interaction);
-            if (interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", flags: MessageFlags.Ephemeral});
+            if (interaction.isChatInputCommand() && interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", flags: MessageFlags.Ephemeral});
             return;
         }
 
