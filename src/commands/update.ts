@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import {fileURLToPath} from "url";
 import {promisify} from "util";
+import type {RevspinCacheEntry} from "../types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,7 +65,7 @@ export default {
         client.revspin = {};
         for (const category of categories) {
             const data = await loadFile(path.join(cacheFolder, `${category}.json`));
-            client.revspin[category] = JSON.parse(data.toString());
+            client.revspin[category] = JSON.parse(data.toString()) as RevspinCacheEntry[];
         }
     }
 };

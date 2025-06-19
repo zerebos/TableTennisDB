@@ -1,5 +1,5 @@
 // src/types.ts
-import {AutocompleteInteraction, BaseInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, ModalSubmitInteraction, SlashCommandBuilder} from "discord.js";
+import {AutocompleteInteraction, BaseInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, ModalSubmitInteraction, SlashCommandBuilder, type ClientEvents} from "discord.js";
 
 export interface ProfileData {
     forehand?: string;
@@ -40,10 +40,25 @@ export type CommandModule = {
     modal: <T extends BaseInteraction = ModalSubmitInteraction>(i: T) => unknown;
 }
 
-export interface EventModule {
-    name: string;
+export interface EventModule<T extends keyof ClientEvents = keyof ClientEvents> {
+    name: T;
     once?: boolean;
-    execute: (...args: unknown[]) => Promise<void>;
+    execute: (...args: ClientEvents[T]) => Promise<void>;
+}
+
+// Helper function to create event modules with type safety and DRY principle
+export function createEventModule<T extends keyof ClientEvents>(
+    config: {
+        name: T,
+        once?: boolean;
+        execute: (...args: ClientEvents[T]) => Promise<void>;
+    }
+): EventModule<T> {
+    return {
+        name: config.name,
+        once: config.once,
+        execute: config.execute
+    };
 }
 
 export interface CommandStats {

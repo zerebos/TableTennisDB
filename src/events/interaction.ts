@@ -1,11 +1,27 @@
-import {type Interaction, ChatInputCommandInteraction, MessageFlags} from "discord.js";
-import type {CommandStats} from "../types";
+import {Events, type Interaction, ChatInputCommandInteraction, MessageFlags} from "discord.js";
+import {createEventModule, type CommandStats} from "../types";
 import {stats} from "../db";
 
+async function addStat(interaction: ChatInputCommandInteraction) {
+    const key = interaction.guildId ?? interaction.client.user?.id;
+    const name = interaction.commandName;
 
-export default {
-    name: "interactionCreate",
+    // More type-safe approach
+    const existingData = await stats.get(key) as CommandStats | undefined;
+    const data: CommandStats = existingData ?? {commands: {}};
 
+    // Ensure commands object exists
+    data.commands ??= {};
+
+    // Increment command count
+    data.commands[name] = (data.commands[name] ?? 0) + 1;
+
+    await stats.set(key, data);
+}
+
+
+export default createEventModule({
+    name: Events.InteractionCreate,
     async execute(interaction: Interaction) {
         let commandName = "";
         let executor: "execute" | "autocomplete" | "button" | "modal" = "execute";
@@ -13,7 +29,7 @@ export default {
         if (interaction.isChatInputCommand()) {
             commandName = interaction.commandName;
             executor = "execute";
-            await this.addStat(interaction);
+            await addStat(interaction);
         }
         else if (interaction.isAutocomplete()) {
             commandName = interaction.commandName;
@@ -30,7 +46,7 @@ export default {
 
         const command = interaction.client.commands.get(commandName);
         if (!commandName || !command || !command[executor]) {
-            console.error("Unrecognized interaction", commandName, executor, interaction);
+            console.error("Unrecognized interaction", commandName, executor);
             if (interaction.isChatInputCommand() && interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", flags: MessageFlags.Ephemeral});
             return;
         }
@@ -42,22 +58,5 @@ export default {
             console.error(error);
             if (interaction.isRepliable()) await interaction.reply({content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral});
         }
-    },
-
-    async addStat(interaction: ChatInputCommandInteraction) {
-        const key = interaction.guildId ?? interaction.client.user?.id;
-        const name = interaction.commandName;
-
-        // More type-safe approach
-        const existingData = await stats.get(key) as CommandStats | undefined;
-        const data: CommandStats = existingData ?? {commands: {}};
-
-        // Ensure commands object exists
-        data.commands ??= {};
-
-        // Increment command count
-        data.commands[name] = (data.commands[name] ?? 0) + 1;
-
-        await stats.set(key, data);
     }
-};
+});

@@ -6,7 +6,7 @@ import {fileURLToPath, pathToFileURL} from "node:url";
 import {Client, Collection, GatewayIntentBits} from "discord.js";
 
 import "dotenv/config";
-import type {CommandModule} from "./types";
+import type {CommandModule, EventModule} from "./types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +24,7 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith("
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    const command: CommandModule | {default: CommandModule} = await import(pathToFileURL(filePath).href);
+    const command = await import(pathToFileURL(filePath).href) as CommandModule | {default: CommandModule};
 
     // Handle both default and named exports
     const commandData = "default" in command ? command.default : command;
@@ -39,9 +39,9 @@ const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".ts"
 
 for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);
-    const event = await import(pathToFileURL(filePath).href);
+    const event = await import(pathToFileURL(filePath).href) as EventModule | {default: EventModule};
     // Handle both default and named exports
-    const eventData = event.default || event;
+    const eventData = "default" in event ? event.default : event;
     if (eventData.once) {
         client.once(eventData.name, (...args) => eventData.execute(...args));
     }
@@ -51,4 +51,4 @@ for (const file of eventFiles) {
 }
 
 // Login to Discord with your client's token
-client.login(process.env.BOT_TOKEN);
+await client.login(process.env.BOT_TOKEN);

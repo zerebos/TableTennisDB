@@ -1,6 +1,7 @@
 import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags} from "discord.js";
 import {profiles, userInstallNotices} from "../db";
 import type {ProfileData} from "../types";
+// import ProfileCardGenerator from "../cards";
 
 
 function createProfileEmbed(user: {username: string, avatarURL: () => (string | null)}, profile: ProfileData) {
@@ -53,6 +54,15 @@ export default {
             await userInstallNotices.set(interaction.user.id, true);
             await interaction.followUp({content: `**New!** Add TableTennisDB to your account for DM access and cross-server profiles!\n\nClick my profile → "Add App" → "Add to My Apps"`, flags: MessageFlags.Ephemeral});
         }
+
+        // const cardBuffer = await ProfileCardGenerator.generateCard(interaction.user, profile);
+
+        // const attachment = new AttachmentBuilder(cardBuffer, {name: "profile-card.png"});
+
+        // await interaction.followUp({
+        //     content: "Here's your profile card!",
+        //     files: [attachment]
+        // });
     },
 
     async edit(interaction: ChatInputCommandInteraction) {
@@ -117,10 +127,10 @@ export default {
         const forehand = interaction.fields.getTextInputValue("forehand");
         const backhand = interaction.fields.getTextInputValue("backhand");
         const blade = interaction.fields.getTextInputValue("blade");
-        interaction.message!.embeds[0].fields[0].value = forehand;
-        interaction.message!.embeds[0].fields[1].value = backhand;
-        interaction.message!.embeds[0].fields[2].value = blade;
-        const newEmbed = EmbedBuilder.from(interaction.message!.embeds[0]);
+        interaction.message.embeds[0].fields[0].value = forehand;
+        interaction.message.embeds[0].fields[1].value = backhand;
+        interaction.message.embeds[0].fields[2].value = blade;
+        const newEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
         await interaction.update({embeds: [newEmbed]});
     },
 
@@ -131,10 +141,10 @@ export default {
         const strengths = interaction.fields.getTextInputValue("strengths");
         const weaknesses = interaction.fields.getTextInputValue("weaknesses");
         const playstyle = interaction.fields.getTextInputValue("playstyle");
-        interaction.message!.embeds[0].fields[3].value = strengths;
-        interaction.message!.embeds[0].fields[4].value = weaknesses;
-        interaction.message!.embeds[0].fields[5].value = playstyle;
-        const newEmbed = EmbedBuilder.from(interaction.message!.embeds[0]);
+        interaction.message.embeds[0].fields[3].value = strengths;
+        interaction.message.embeds[0].fields[4].value = weaknesses;
+        interaction.message.embeds[0].fields[5].value = playstyle;
+        const newEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
         await interaction.update({embeds: [newEmbed]});
     },
 };

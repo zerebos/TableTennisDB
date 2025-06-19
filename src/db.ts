@@ -2,6 +2,7 @@ import path from "path";
 import {fileURLToPath} from "url";
 import Keyv from "keyv";
 import Sqlite from "@keyv/sqlite";
+import type {CommandStats, ProfileData} from "./types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +14,7 @@ const sqliteUri = "sqlite://" + path.resolve(__dirname, "..", "settings.sqlite3"
 const sqliteStore = new Sqlite(sqliteUri);
 
 // Export pre-configured database instances sharing the same store
-export const profiles = new Keyv(sqliteStore, {namespace: "profiles"});
-export const stats = new Keyv(sqliteStore, {namespace: "stats"});
+export const profiles = new Keyv<ProfileData>(sqliteStore, {namespace: "profiles"});
+export const stats = new Keyv<CommandStats>(sqliteStore, {namespace: "stats"});
 export const revspin = new Keyv(sqliteStore, {namespace: "revspin"}); // TODO: use this instead of the client.revspin cache
-export const userInstallNotices = new Keyv(sqliteStore, {namespace: "userInstallNotices"});
+export const userInstallNotices = new Keyv<boolean>(sqliteStore, {namespace: "userInstallNotices"});
