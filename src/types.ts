@@ -1,5 +1,5 @@
 // src/types.ts
-import {AutocompleteInteraction, BaseInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, ModalSubmitInteraction, SlashCommandBuilder, type ClientEvents} from "discord.js";
+import {AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, ModalSubmitInteraction, SlashCommandBuilder, StringSelectMenuInteraction, type ClientEvents, ButtonBuilder, ModalBuilder, StringSelectMenuBuilder, Events} from "discord.js";
 
 export interface ProfileData {
     forehand?: string;
@@ -26,7 +26,8 @@ export interface RevspinCacheEntry {
 declare module "discord.js" {
     interface Client {
         cpuUsage: NodeJS.CpuUsage;
-        commands: Collection<string, CommandModule>
+        commands: Collection<string, CommandModule | HybridCommandModule>;
+        componentHandlers?: Map<string, (interaction: ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction) => Promise<void>>;
         revspin: Record<string, RevspinCacheEntry[]>;
     }
 }
@@ -34,11 +35,12 @@ declare module "discord.js" {
 export type CommandModule = {
     data: SlashCommandBuilder;
     owner?: boolean;
-    execute: <T extends BaseInteraction = ChatInputCommandInteraction>(interaction: T) => Promise<void>;
-    autocomplete: <T extends BaseInteraction = AutocompleteInteraction>(i: T) => unknown;
-    button: <T extends BaseInteraction = ButtonInteraction>(i: T) => unknown;
-    modal: <T extends BaseInteraction = ModalSubmitInteraction>(i: T) => unknown;
-}
+    guildId: string;
+    execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+    autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+    button?: (interaction: ButtonInteraction) => Promise<void>;
+    modal?: (interaction: ModalSubmitInteraction) => Promise<void>;
+};
 
 export interface EventModule<T extends keyof ClientEvents = keyof ClientEvents> {
     name: T;
@@ -64,7 +66,7 @@ export function createEventModule<T extends keyof ClientEvents>(
 export interface CommandStats {
     commands?: {
         [key: string]: number;
-    }
+    };
 }
 
 
@@ -106,4 +108,134 @@ export interface NCTTAPlayer {
     school: number;
     updDTime: string;
     usatt: string;
+}
+
+// Component definition interface for hybrid architecture
+export interface ComponentDefinition {
+    id: string;
+    handler: (interaction: ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction) => Promise<void>;
+    builder: ButtonBuilder | ModalBuilder | StringSelectMenuBuilder;
+}
+
+// Component factory for creating type-safe components
+export class ComponentFactory {
+    constructor(private commandName: string) {}
+
+    button(id: string, handler: (interaction: ButtonInteraction) => Promise<void>): ComponentDefinition {
+        const uniqueId = `${this.commandName}:btn:${id}`;
+        const builder = new ButtonBuilder().setCustomId(uniqueId);
+
+        return {
+            id: uniqueId,
+            handler: handler as (interaction: ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction) => Promise<void>,
+            builder
+        };
+    }
+
+    modal(id: string, handler: (interaction: ModalSubmitInteraction) => Promise<void>): ComponentDefinition {
+        const uniqueId = `${this.commandName}:modal:${id}`;
+        const builder = new ModalBuilder().setCustomId(uniqueId);
+
+        return {
+            id: uniqueId,
+            handler: handler as (interaction: ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction) => Promise<void>,
+            builder
+        };
+    }
+
+    selectMenu(id: string, handler: (interaction: StringSelectMenuInteraction) => Promise<void>): ComponentDefinition {
+        const uniqueId = `${this.commandName}:select:${id}`;
+        const builder = new StringSelectMenuBuilder().setCustomId(uniqueId);
+
+        return {
+            id: uniqueId,
+            handler: handler as (interaction: ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction) => Promise<void>,
+            builder
+        };
+    }
+}
+
+// Event factory for creating type-safe events
+export class EventFactory {
+    constructor(private commandName: string) {}
+
+    event<T extends keyof ClientEvents>(
+        name: T,
+        handler: (...args: ClientEvents[T]) => Promise<void>,
+        options?: {once?: boolean;}
+    ): EventModule<T> {
+        return createEventModule({
+            name,
+            once: options?.once,
+            execute: async (...args: ClientEvents[T]) => {
+                try {
+                    await handler(...args);
+                }
+                catch (error) {
+                    console.error(`[${this.commandName}] Error in ${name} event:`, error);
+                }
+            }
+        });
+    }
+
+    // Convenient shortcuts
+    ready(handler: (...args: ClientEvents["ready"]) => Promise<void>, once = true) {
+        return this.event(Events.ClientReady as "ready", handler, {once});
+    }
+
+    guildCreate(handler: (...args: ClientEvents["guildCreate"]) => Promise<void>) {
+        return this.event(Events.GuildCreate as "guildCreate", handler);
+    }
+
+    voiceStateUpdate(handler: (...args: ClientEvents["voiceStateUpdate"]) => Promise<void>) {
+        return this.event(Events.VoiceStateUpdate as "voiceStateUpdate", handler);
+    }
+
+    messageCreate(handler: (...args: ClientEvents["messageCreate"]) => Promise<void>) {
+        return this.event(Events.MessageCreate as "messageCreate", handler);
+    }
+}
+
+// Enhanced hybrid command module interface
+export interface HybridCommandModule {
+    data: SlashCommandBuilder;
+    owner?: boolean;
+    execute: (interaction: ChatInputCommandInteraction, components?: Map<string, ComponentDefinition>) => Promise<void>;
+    autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+    components: Map<string, ComponentDefinition>;
+    events?: Array<EventModule<keyof ClientEvents>>;
+    cleanup?: () => Promise<void>;
+}
+
+// Enhanced createCommand function
+export function createCommand(config: {
+    data: SlashCommandBuilder;
+    owner?: boolean;
+    execute: (interaction: ChatInputCommandInteraction, components?: Map<string, ComponentDefinition>) => Promise<void>;
+    autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
+    components?: (factory: ComponentFactory) => ComponentDefinition[];
+    events?: (factory: EventFactory) => Array<EventModule<keyof ClientEvents>>;
+    cleanup?: () => Promise<void>;
+}): HybridCommandModule {
+    const commandName = config.data.name;
+    const componentFactory = new ComponentFactory(commandName);
+    const eventFactory = new EventFactory(commandName);
+
+    // Setup components and create lookup map
+    const componentDefs = config.components?.(componentFactory) || [];
+    const componentMap = new Map<string, ComponentDefinition>();
+    componentDefs.forEach(def => componentMap.set(def.id, def));
+
+    // Setup events
+    const events = config.events?.(eventFactory) || [];
+
+    return {
+        data: config.data,
+        owner: config.owner,
+        execute: (interaction) => config.execute(interaction, componentMap.size > 0 ? componentMap : undefined),
+        autocomplete: config.autocomplete,
+        components: componentMap,
+        events: events.length > 0 ? events : undefined,
+        cleanup: config.cleanup
+    };
 }

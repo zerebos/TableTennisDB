@@ -18,7 +18,7 @@ const __dirname = path.dirname(__filename);
 const rest = new REST({version: "10"}).setToken(process.env.BOT_TOKEN!);
 const api = new API(rest);
 
-async function setCommands(globalCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[], guildCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[]) {
+async function setCommands(globalCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[], guildCommands: Record<string, RESTPostAPIChatInputApplicationCommandsJSONBody[]>) {
     // Deploy global commands
     try {
         console.log(`\n🚀 Started ${shouldClear ? "clearing" : "registering"} global application commands...`);
@@ -32,12 +32,14 @@ async function setCommands(globalCommands: RESTPostAPIChatInputApplicationComman
     // Deploy guild commands (owner commands)
     if (process.env.BOT_GUILD_ID) {
         try {
-            console.log(`\n🚀 Started ${shouldClear ? "clearing" : "registering"} guild commands...`);
-            const result = await api.applicationCommands.bulkOverwriteGuildCommands(process.env.BOT_CLIENT_ID!, process.env.BOT_GUILD_ID, guildCommands);
-            console.log(`✅ Successfully ${shouldClear ? "cleared" : `registered ${result.length}`} guild commands.`);
+            for (const [guildId, commands] of Object.entries(guildCommands)) {
+                console.log(`\n🚀 Started ${shouldClear ? "clearing" : "registering"} guild commands for Guild ID: ${guildId}...`);
+                const result = await api.applicationCommands.bulkOverwriteGuildCommands(process.env.BOT_CLIENT_ID!, guildId, commands);
+                console.log(`✅ Successfully ${shouldClear ? "cleared" : `registered ${result.length}`} guild commands for Guild ID: ${guildId}.`);
+            }
         }
-    catch (error) {
-        console.error(`❌ Failed to ${shouldClear ? "clear" : "register"} guild commands:`, error);
+        catch (error) {
+            console.error(`❌ Failed to ${shouldClear ? "clear" : "register"} guild commands:`, error);
         }
     }
     else if (!process.env.BOT_GUILD_ID) {
@@ -49,13 +51,14 @@ async function setCommands(globalCommands: RESTPostAPIChatInputApplicationComman
 
 if (!shouldClear) {
     const commands = [];
-    const ownerCommands = [];
+    const guildCommands: Record<string, RESTPostAPIChatInputApplicationCommandsJSONBody[]> = {};
+
     const commandsPath = path.join(__dirname, "..", "src", "commands");
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".ts"));
 
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
-        const commandModule = await import(pathToFileURL(filePath).href) as CommandModule | {default: CommandModule};
+        const commandModule = await import(pathToFileURL(filePath).href) as CommandModule | {default: CommandModule;};
         const command = ("default" in commandModule) ? commandModule.default : commandModule;
 
         if (!command.data) {
@@ -67,8 +70,14 @@ if (!shouldClear) {
 
         // Separate owner commands to "privileged" guild
         if (command.owner) {
-            ownerCommands.push(commandData);
+            guildCommands[process.env.BOT_GUILD_ID!] = guildCommands[process.env.BOT_GUILD_ID!] || [];
+            guildCommands[process.env.BOT_GUILD_ID!].push(commandData);
             console.log(`🔒 Owner command: ${commandData.name}`);
+        }
+        else if (command.guildId) {
+            guildCommands[command.guildId] = guildCommands[command.guildId] || [];
+            guildCommands[command.guildId].push(commandData);
+            console.log(`📌 Guild-specific command: ${commandData.name} (Guild ID: ${command.guildId})`);
         }
         else {
             commands.push(commandData);
@@ -77,8 +86,8 @@ if (!shouldClear) {
         }
     }
 
-    console.log(`📁 Loaded ${commands.length} global commands and ${ownerCommands.length} owner commands`);
-    await setCommands(commands, ownerCommands);
+    console.log(`📁 Loaded ${commands.length} global commands and ${Object.values(guildCommands).flat().length} guild commands`);
+    await setCommands(commands, guildCommands);
 }
 else {
     console.log("🗑️  Clearing all commands...");

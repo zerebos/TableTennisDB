@@ -6,7 +6,7 @@ import {fileURLToPath, pathToFileURL} from "node:url";
 import {Client, Collection, GatewayIntentBits} from "discord.js";
 
 import "dotenv/config";
-import type {CommandModule, EventModule} from "./types";
+import type {CommandModule, EventModule, HybridCommandModule} from "./types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,13 +18,13 @@ const client: Client & {commands?: Collection<string, object>} = new Client({
     presence: {activities: [{name: "🆕 Now user-installable!", type: 4}]}
 });
 
-client.commands = new Collection<string, CommandModule>();
+client.commands = new Collection<string, CommandModule | HybridCommandModule>();
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".ts"));
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    const command = await import(pathToFileURL(filePath).href) as CommandModule | {default: CommandModule};
+    const command = await import(pathToFileURL(filePath).href) as CommandModule | HybridCommandModule | {default: CommandModule | HybridCommandModule};
 
     // Handle both default and named exports
     const commandData = "default" in command ? command.default : command;
@@ -32,6 +32,30 @@ for (const file of commandFiles) {
     // Set a new item in the Collection
     // With the key as the command name and the value as the exported module
     client.commands.set(commandData.data.name, commandData);
+
+    // For hybrid commands, register component handlers globally
+    if ("components" in commandData) {
+        const hybridCommand = commandData;
+        // Register component handlers globally on the client for easy access
+        if (!client.componentHandlers) {
+            client.componentHandlers = new Map();
+        }
+        for (const [id, componentDef] of hybridCommand.components) {
+            client.componentHandlers.set(id, componentDef.handler);
+        }
+
+        // Register any command-specific events
+        if (hybridCommand.events) {
+            for (const event of hybridCommand.events) {
+                if (event.once) {
+                    client.once(event.name, (...args) => event.execute(...args));
+                }
+                else {
+                    client.on(event.name, (...args) => event.execute(...args));
+                }
+            }
+        }
+    }
 }
 
 const eventsPath = path.join(__dirname, "events");

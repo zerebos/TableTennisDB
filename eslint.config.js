@@ -4,7 +4,7 @@ import ts from "@zerebos/eslint-config-typescript";
 /** @type {import("@zerebos/eslint-config-typescript").ConfigArray} */
 export default [
     ...node,
-    ...ts.configs.recommendedWithTypes,
+    ...ts.configs.recommended,
     {
         rules: {
             "no-console": "off",

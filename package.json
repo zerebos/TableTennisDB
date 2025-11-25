@@ -17,17 +17,17 @@
     "@types/string-similarity": "^4.0.2",
     "@zerebos/eslint-config": "file:../../eslint-configs/packages/base",
     "@zerebos/eslint-config-typescript": "file:../../eslint-configs/packages/typescript",
-    "eslint": "^9.29.0"
+    "eslint": "^9.39.1"
   },
   "dependencies": {
-    "@discordjs/core": "^2.1.0",
-    "@discordjs/rest": "^2.5.0",
-    "@keyv/sqlite": "^4.0.4",
-    "canvas": "^3.1.0",
-    "cheerio": "^1.1.0",
-    "discord.js": "^14.19.3",
-    "dotenv": "^16.5.0",
-    "keyv": "^5.3.4",
+    "@discordjs/core": "^2.4.0",
+    "@discordjs/rest": "^2.6.0",
+    "@keyv/sqlite": "^4.0.6",
+    "canvas": "^3.2.0",
+    "cheerio": "^1.1.2",
+    "discord.js": "^14.25.0",
+    "dotenv": "^17.2.3",
+    "keyv": "^5.5.4",
     "string-similarity": "^4.0.4"
   },
   "overrides": {

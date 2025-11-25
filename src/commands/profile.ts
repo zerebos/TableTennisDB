@@ -1,6 +1,6 @@
-import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, MessageFlags, ComponentType, ButtonStyle, TextInputStyle, ModalBuilder, ActionRowBuilder, TextInputBuilder} from "discord.js";
 import {profiles, userInstallNotices} from "../db";
-import type {ProfileData} from "../types";
+import {createCommand, type ProfileData} from "../types";
 // import ProfileCardGenerator from "../cards";
 
 
@@ -19,7 +19,7 @@ function createProfileEmbed(user: {username: string, avatarURL: () => (string | 
         );
 }
 
-export default {
+export default createCommand({
     data: new SlashCommandBuilder()
         .setName("profile")
         .setDescription("Share or edit your table tennis profile!")
@@ -30,121 +30,273 @@ export default {
                                     .setRequired(false)))
         .addSubcommand(cmd => cmd.setName("edit").setDescription("Modify or setup your profile!"))
         .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
-        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
+        .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel) as SlashCommandBuilder,
 
-    async execute(interaction: CommandInteraction) {
-        if (!interaction.isChatInputCommand()) return;
+    async execute(interaction: ChatInputCommandInteraction) {
         const command = interaction.options.getSubcommand();
-        if (command === "view") return await this.view(interaction);
-        if (command === "edit") return await this.edit(interaction);
+        if (command === "view") {
+            await handleView(interaction);
+            return;
+        }
+        if (command === "edit") {
+            await handleEditWithCollectors(interaction);
+            return;
+        }
     },
 
-    async view(interaction: ChatInputCommandInteraction) {
-        const user = interaction.options.getUser("user") ?? interaction.user;
-        const profile = await profiles.get(user.id) as ProfileData | undefined;
+    // No components needed for collector-based approach
+    // components(_factory) {
+    //     return [];
+    // }
+});
 
-        if (!profile) {
-            const noEmbed = new EmbedBuilder().setColor("Red").setDescription("No profile found, please set one up using `/profile edit`!");
-            return await interaction.reply({embeds: [noEmbed]});
+async function handleView(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser("user") ?? interaction.user;
+    const profile = await profiles.get(user.id) as ProfileData | undefined;
+
+    if (!profile) {
+        const noEmbed = new EmbedBuilder().setColor("Red").setDescription("No profile found, please set one up using `/profile edit`!");
+        await interaction.reply({embeds: [noEmbed]});
+        return;
+    }
+
+    await interaction.reply({embeds: [createProfileEmbed(user, profile)]});
+    const hasShownNotice = await userInstallNotices.get(interaction.user.id);
+    if (!hasShownNotice) {
+        await userInstallNotices.set(interaction.user.id, true);
+        await interaction.followUp({content: `**New!** Add TableTennisDB to your account for DM access and cross-server profiles!\n\nClick my profile → "Add App" → "Add to My Apps"`, flags: MessageFlags.Ephemeral});
+    }
+}
+
+// New collector-based approach
+async function handleEditWithCollectors(interaction: ChatInputCommandInteraction) {
+    const profile = await profiles.get(interaction.user.id) ?? {};
+
+    // Create buttons using plain objects for simplicity
+    const saveButton = {
+        type: ComponentType.Button,
+        customId: "save_profile",
+        label: "Save",
+        style: ButtonStyle.Success
+    };
+
+    const gearButton = {
+        type: ComponentType.Button,
+        customId: "edit_gear",
+        label: "Edit Gear",
+        style: ButtonStyle.Secondary
+    };
+
+    const skillsButton = {
+        type: ComponentType.Button,
+        customId: "edit_skills",
+        label: "Edit Skills",
+        style: ButtonStyle.Secondary
+    };
+
+    const row = {
+        type: ComponentType.ActionRow,
+        components: [saveButton, gearButton, skillsButton]
+    };
+
+    const profileEmbed = createProfileEmbed(interaction.user, profile);
+    profileEmbed.setFooter({text: "💡 Suggest profile features on Discord or GitHub - See /about for links."});
+
+    const response = await interaction.reply({
+        embeds: [profileEmbed],
+        components: [row],
+        flags: MessageFlags.Ephemeral
+    });
+
+    // Set up collectors for this specific interaction
+    const collectorFilter = (i: ButtonInteraction) => i.user.id === interaction.user.id;
+
+    const collector = response.createMessageComponentCollector({
+        filter: collectorFilter,
+        time: 300000, // 5 minutes
+        componentType: ComponentType.Button
+    });
+
+    collector.on("collect", async (buttonInteraction: ButtonInteraction) => {
+        if (buttonInteraction.customId === "save_profile") {
+            await handleSaveProfile(buttonInteraction);
+        }
+        else if (buttonInteraction.customId === "edit_gear") {
+            await handleGearModal(buttonInteraction);
+        }
+        else if (buttonInteraction.customId === "edit_skills") {
+            await handleSkillsModal(buttonInteraction);
+        }
+    });
+
+    collector.on("end", () => {
+        // Disable buttons when collector expires
+        const disabledRow = {
+            type: ComponentType.ActionRow,
+            components: [
+                {...saveButton, disabled: true},
+                {...gearButton, disabled: true},
+                {...skillsButton, disabled: true}
+            ]
+        };
+
+        interaction.editReply({components: [disabledRow]}).catch(() => {
+            // Ignore errors if message was already deleted
+        });
+    });
+}
+
+async function handleSaveProfile(interaction: ButtonInteraction) {
+    if (!interaction.message) return;
+
+    const data: Record<string, string> = {};
+    interaction.message.embeds[0].fields.forEach(f => data[f.name.toLowerCase()] = f.value);
+    await profiles.set(interaction.user.id, data);
+
+    const successEmbed = new EmbedBuilder()
+        .setColor("Green")
+        .setDescription("Profile saved successfully!");
+
+    await interaction.update({embeds: [successEmbed], components: []});
+}
+
+async function handleGearModal(interaction: ButtonInteraction) {
+    const profile = await profiles.get(interaction.user.id) ?? {};
+
+    // Use builders for modals since plain objects have type issues
+    const modal = new ModalBuilder()
+        .setCustomId("gear_modal")
+        .setTitle("Add Your Gear");
+
+    const forehhandInput = new TextInputBuilder()
+        .setCustomId("forehand")
+        .setLabel("Forehand")
+        .setStyle(TextInputStyle.Short)
+        .setValue(profile.forehand ?? "")
+        .setRequired(false);
+
+    const backhandInput = new TextInputBuilder()
+        .setCustomId("backhand")
+        .setLabel("Backhand")
+        .setStyle(TextInputStyle.Short)
+        .setValue(profile.backhand ?? "")
+        .setRequired(false);
+
+    const bladeInput = new TextInputBuilder()
+        .setCustomId("blade")
+        .setLabel("Blade")
+        .setStyle(TextInputStyle.Short)
+        .setValue(profile.blade ?? "")
+        .setRequired(false);
+
+    const forehhandRow = new ActionRowBuilder<TextInputBuilder>().addComponents(forehhandInput);
+    const backhandRow = new ActionRowBuilder<TextInputBuilder>().addComponents(backhandInput);
+    const bladeRow = new ActionRowBuilder<TextInputBuilder>().addComponents(bladeInput);
+
+    modal.addComponents(forehhandRow, backhandRow, bladeRow);
+
+    await interaction.showModal(modal);
+
+    // Set up modal collector
+    try {
+        const modalSubmission = await interaction.awaitModalSubmit({
+            filter: (i) => i.customId === "gear_modal" && i.user.id === interaction.user.id,
+            time: 300000 // 5 minutes
+        });
+
+        const forehand = modalSubmission.fields.getTextInputValue("forehand");
+        const backhand = modalSubmission.fields.getTextInputValue("backhand");
+        const blade = modalSubmission.fields.getTextInputValue("blade");
+
+        if (!modalSubmission.message) {
+            await modalSubmission.reply({content: "Error: Could not find original message.", flags: MessageFlags.Ephemeral});
+            return;
         }
 
-        await interaction.reply({embeds: [createProfileEmbed(user, profile)]});
-        const hasShownNotice = await userInstallNotices.get(interaction.user.id);
-        if (!hasShownNotice) {
-            await userInstallNotices.set(interaction.user.id, true);
-            await interaction.followUp({content: `**New!** Add TableTennisDB to your account for DM access and cross-server profiles!\n\nClick my profile → "Add App" → "Add to My Apps"`, flags: MessageFlags.Ephemeral});
-        }
-
-        // const cardBuffer = await ProfileCardGenerator.generateCard(interaction.user, profile);
-
-        // const attachment = new AttachmentBuilder(cardBuffer, {name: "profile-card.png"});
-
-        // await interaction.followUp({
-        //     content: "Here's your profile card!",
-        //     files: [attachment]
-        // });
-    },
-
-    async edit(interaction: ChatInputCommandInteraction) {
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder().setCustomId("profile-save").setLabel("Save").setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId("profile-gear").setLabel("Edit Gear").setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId("profile-skills").setLabel("Edit Skills").setStyle(ButtonStyle.Secondary),
+        // Update the embed fields
+        const embed = modalSubmission.message.embeds[0];
+        const newEmbed = EmbedBuilder.from(embed);
+        newEmbed.spliceFields(0, 3,
+            {name: "Forehand", value: forehand || "\u200B", inline: true},
+            {name: "Backhand", value: backhand || "\u200B", inline: true},
+            {name: "Blade", value: blade || "\u200B", inline: true}
         );
 
-        const profile = await profiles.get(interaction.user.id) ?? {};
-        const profileEmbed = createProfileEmbed(interaction.user, profile);
-        profileEmbed.setFooter({text: "💡 Suggest profile features on Discord or GitHub - See /about for links."});
-        await interaction.reply({embeds: [profileEmbed], components: [row], flags: MessageFlags.Ephemeral});
-    },
+        await modalSubmission.deferUpdate();
+        await modalSubmission.editReply({embeds: [newEmbed]});
+    }
+    catch {
+        // Modal timed out or was cancelled
+        console.log("Gear modal timed out");
+    }
+}
 
-    /**
-     * @param interaction {import("discord.js").ButtonInteraction}
-     */
-    async button(interaction: ButtonInteraction) {
-        const id = interaction.customId.split("-")[1];
-        const profile = await profiles.get(interaction.user.id) ?? {};
+async function handleSkillsModal(interaction: ButtonInteraction) {
+    const profile = await profiles.get(interaction.user.id) ?? {};
 
-        if (id === "gear") {
-            const modal = new ModalBuilder().setTitle("Add Your Gear").setCustomId("profile-gear");
-            const forehand = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("forehand").setLabel("Forehand").setStyle(TextInputStyle.Short).setValue(profile.forehand ?? ""));
-            const backhand = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("backhand").setLabel("Backhand").setStyle(TextInputStyle.Short).setValue(profile.backhand ?? ""));
-            const blade = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("blade").setLabel("Blade").setStyle(TextInputStyle.Short).setValue(profile.blade ?? ""));
-            modal.addComponents(forehand, backhand, blade);
-            await interaction.showModal(modal);
+    const modal = new ModalBuilder()
+        .setCustomId("skills_modal")
+        .setTitle("Add Your Skills");
+
+    const strengthsInput = new TextInputBuilder()
+        .setCustomId("strengths")
+        .setLabel("Strengths")
+        .setStyle(TextInputStyle.Short)
+        .setValue(profile.strengths ?? "")
+        .setRequired(false);
+
+    const weaknessesInput = new TextInputBuilder()
+        .setCustomId("weaknesses")
+        .setLabel("Weaknesses")
+        .setStyle(TextInputStyle.Short)
+        .setValue(profile.weaknesses ?? "")
+        .setRequired(false);
+
+    const playstyleInput = new TextInputBuilder()
+        .setCustomId("playstyle")
+        .setLabel("Playstyle")
+        .setStyle(TextInputStyle.Short)
+        .setValue(profile.playstyle ?? "")
+        .setRequired(false);
+
+    const strengthsRow = new ActionRowBuilder<TextInputBuilder>().addComponents(strengthsInput);
+    const weaknessesRow = new ActionRowBuilder<TextInputBuilder>().addComponents(weaknessesInput);
+    const playstyleRow = new ActionRowBuilder<TextInputBuilder>().addComponents(playstyleInput);
+
+    modal.addComponents(strengthsRow, weaknessesRow, playstyleRow);
+
+    await interaction.showModal(modal);
+
+    // Set up modal collector
+    try {
+        const modalSubmission = await interaction.awaitModalSubmit({
+            filter: (i) => i.customId === "skills_modal" && i.user.id === interaction.user.id,
+            time: 300000 // 5 minutes
+        });
+
+        const strengths = modalSubmission.fields.getTextInputValue("strengths");
+        const weaknesses = modalSubmission.fields.getTextInputValue("weaknesses");
+        const playstyle = modalSubmission.fields.getTextInputValue("playstyle");
+
+        if (!modalSubmission.message) {
+            await modalSubmission.reply({content: "Error: Could not find original message.", flags: MessageFlags.Ephemeral});
+            return;
         }
-        if (id === "skills") {
-            const modal = new ModalBuilder().setTitle("Add Your Skills").setCustomId("profile-skills");
-            const strengths = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("strengths").setLabel("Strengths").setStyle(TextInputStyle.Short).setValue(profile.strengths ?? ""));
-            const weaknesses = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("weaknesses").setLabel("Weaknesses").setStyle(TextInputStyle.Short).setValue(profile.weaknesses ?? ""));
-            const playstyle = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("playstyle").setLabel("Playstyle").setStyle(TextInputStyle.Short).setValue(profile.playstyle ?? ""));
-            modal.addComponents(strengths, weaknesses, playstyle);
-            await interaction.showModal(modal);
-        }
-        if (id === "save") {
-            const data: Record<string, string> = {};
-            interaction.message.embeds[0].fields.map(f => ({[f.name]: f.value}));
-            interaction.message.embeds[0].fields.forEach(f => data[f.name.toLowerCase()] = f.value);
-            await profiles.set(interaction.user.id, data);
-            await interaction.update({embeds: [new EmbedBuilder().setColor("Green").setDescription("Profile saved successfully!")], components: []});
-        }
-    },
 
-    /**
-     * @param interaction {import("discord.js").ModalMessageModalSubmitInteraction}
-     */
-    async modal(interaction: ModalMessageModalSubmitInteraction) {
-    const id = interaction.customId.split("-")[1];
-    if (id === "skills") return await this.skills(interaction);
-    return await this.gear(interaction);
-    },
+        // Update the embed fields
+        const embed = modalSubmission.message.embeds[0];
+        const newEmbed = EmbedBuilder.from(embed);
+        newEmbed.spliceFields(3, 3,
+            {name: "Strengths", value: strengths || "\u200B", inline: true},
+            {name: "Weaknesses", value: weaknesses || "\u200B", inline: true},
+            {name: "Playstyle", value: playstyle || "\u200B", inline: true}
+        );
 
-    /**
-     * @param interaction {import("discord.js").ModalMessageModalSubmitInteraction}
-     */
-    async gear(interaction: ModalMessageModalSubmitInteraction) {
-        const forehand = interaction.fields.getTextInputValue("forehand");
-        const backhand = interaction.fields.getTextInputValue("backhand");
-        const blade = interaction.fields.getTextInputValue("blade");
-        interaction.message.embeds[0].fields[0].value = forehand;
-        interaction.message.embeds[0].fields[1].value = backhand;
-        interaction.message.embeds[0].fields[2].value = blade;
-        const newEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
-        await interaction.update({embeds: [newEmbed]});
-    },
-
-    /**
-     * @param interaction {import("discord.js").ModalMessageModalSubmitInteraction}
-     */
-    async skills(interaction: ModalMessageModalSubmitInteraction) {
-        const strengths = interaction.fields.getTextInputValue("strengths");
-        const weaknesses = interaction.fields.getTextInputValue("weaknesses");
-        const playstyle = interaction.fields.getTextInputValue("playstyle");
-        interaction.message.embeds[0].fields[3].value = strengths;
-        interaction.message.embeds[0].fields[4].value = weaknesses;
-        interaction.message.embeds[0].fields[5].value = playstyle;
-        const newEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
-        await interaction.update({embeds: [newEmbed]});
-    },
-};
+        await modalSubmission.deferUpdate();
+        await modalSubmission.editReply({embeds: [newEmbed]});
+    }
+    catch {
+        // Modal timed out or was cancelled
+        console.log("Skills modal timed out");
+    }
+}
