@@ -1,5 +1,5 @@
 import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags} from "discord.js";
-import {profiles, userInstallNotices} from "../db";
+import {getProfile, setProfile, hasSeenNotice, markNoticeSeen} from "../db";
 import type {ProfileData} from "../types";
 
 
@@ -40,7 +40,7 @@ export default {
 
     async view(interaction: ChatInputCommandInteraction) {
         const user = interaction.options.getUser("user") ?? interaction.user;
-        const profile = await profiles.get(user.id) as ProfileData | undefined;
+        const profile = await getProfile(user.id);
 
         if (!profile) {
             const noEmbed = new EmbedBuilder().setColor("Red").setDescription("No profile found, please set one up using `/profile edit`!");
@@ -48,9 +48,9 @@ export default {
         }
 
         await interaction.reply({embeds: [createProfileEmbed(user, profile)]});
-        const hasShownNotice = await userInstallNotices.get(interaction.user.id);
+        const hasShownNotice = await hasSeenNotice(interaction.user.id);
         if (!hasShownNotice) {
-            await userInstallNotices.set(interaction.user.id, true);
+            await markNoticeSeen(interaction.user.id);
             await interaction.followUp({content: `**New!** Add TableTennisDB to your account for DM access and cross-server profiles!\n\nClick my profile → "Add App" → "Add to My Apps"`, flags: MessageFlags.Ephemeral});
         }
     },
@@ -63,7 +63,7 @@ export default {
                 new ButtonBuilder().setCustomId("profile-skills").setLabel("Edit Skills").setStyle(ButtonStyle.Secondary),
         );
 
-        const profile = await profiles.get(interaction.user.id) ?? {};
+        const profile = await getProfile(interaction.user.id) ?? {};
         const profileEmbed = createProfileEmbed(interaction.user, profile);
         profileEmbed.setFooter({text: "💡 Suggest profile features on Discord or GitHub - See /about for links."});
         await interaction.reply({embeds: [profileEmbed], components: [row], flags: MessageFlags.Ephemeral});
@@ -74,7 +74,7 @@ export default {
      */
     async button(interaction: ButtonInteraction) {
         const id = interaction.customId.split("-")[1];
-        const profile = await profiles.get(interaction.user.id) ?? {};
+        const profile = await getProfile(interaction.user.id) ?? {};
 
         if (id === "gear") {
             const modal = new ModalBuilder().setTitle("Add Your Gear").setCustomId("profile-gear");
@@ -93,10 +93,9 @@ export default {
             await interaction.showModal(modal);
         }
         if (id === "save") {
-            const data: Record<string, string> = {};
-            interaction.message.embeds[0].fields.map(f => ({[f.name]: f.value}));
-            interaction.message.embeds[0].fields.forEach(f => data[f.name.toLowerCase()] = f.value);
-            await profiles.set(interaction.user.id, data);
+            const data: ProfileData = {};
+            interaction.message.embeds[0].fields.forEach(f => (data as Record<string, string>)[f.name.toLowerCase()] = f.value);
+            await setProfile(interaction.user.id, data);
             await interaction.update({embeds: [new EmbedBuilder().setColor("Green").setDescription("Profile saved successfully!")], components: []});
         }
     },

@@ -1,6 +1,5 @@
 import {type Interaction, ChatInputCommandInteraction, MessageFlags} from "discord.js";
-import type {CommandStats} from "../types";
-import {stats} from "../db";
+import {incrementStat} from "../db";
 
 
 export default {
@@ -46,18 +45,8 @@ export default {
 
     async addStat(interaction: ChatInputCommandInteraction) {
         const key = interaction.guildId ?? interaction.client.user?.id;
+        if (!key) return;
         const name = interaction.commandName;
-
-        // More type-safe approach
-        const existingData = await stats.get(key) as CommandStats | undefined;
-        const data: CommandStats = existingData ?? {commands: {}};
-
-        // Ensure commands object exists
-        data.commands ??= {};
-
-        // Increment command count
-        data.commands[name] = (data.commands[name] ?? 0) + 1;
-
-        await stats.set(key, data);
+        await incrementStat(key, name);
     }
 };
