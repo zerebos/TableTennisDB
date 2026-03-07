@@ -7,7 +7,8 @@ LABEL org.opencontainers.image.source="https://github.com/zerebos/TableTennisDB"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Add git for showing latest changes in about
-RUN apk add --no-cache git
+# Add fontconfig and fonts for @napi-rs/canvas image generation
+RUN apk add --no-cache git fontconfig ttf-dejavu
 
 # Setup state for building
 WORKDIR /app

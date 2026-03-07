@@ -1,6 +1,7 @@
-import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags, AttachmentBuilder} from "discord.js";
 import {profiles, userInstallNotices} from "../db";
 import type {ProfileData} from "../types";
+import {generateProfileImage} from "../profileImage";
 
 
 function createProfileEmbed(user: {username: string, avatarURL: () => (string | null)}, profile: ProfileData) {
@@ -47,7 +48,18 @@ export default {
             return await interaction.reply({embeds: [noEmbed]});
         }
 
-        await interaction.reply({embeds: [createProfileEmbed(user, profile)]});
+        await interaction.deferReply();
+
+        try {
+            const imageBuffer = await generateProfileImage(user, profile);
+            const attachment = new AttachmentBuilder(imageBuffer, {name: "profile.png"});
+            await interaction.editReply({files: [attachment]});
+        } catch (err) {
+            console.error("[profile] Image generation failed, falling back to embed:", err);
+            // Fallback to embed if image generation fails
+            await interaction.editReply({embeds: [createProfileEmbed(user, profile)]});
+        }
+
         const hasShownNotice = await userInstallNotices.get(interaction.user.id);
         if (!hasShownNotice) {
             await userInstallNotices.set(interaction.user.id, true);
