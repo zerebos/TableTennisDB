@@ -47,6 +47,6 @@ export default {
         const key = interaction.guildId ?? interaction.client.user?.id;
         if (!key) return;
         const name = interaction.commandName;
-        await incrementStat(key, name);
+        incrementStat(key, name);
     }
 };

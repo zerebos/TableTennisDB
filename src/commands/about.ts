@@ -1,7 +1,7 @@
 import childProcess from "child_process";
 import {promisify} from "util";
 import {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
-import {getStats} from "../db";
+import {aggregateStats} from "../db";
 
 
 const exec = promisify(childProcess.exec);
@@ -82,25 +82,7 @@ export default {
 
         addField(`Emojis`, interaction.client.emojis.cache.size.toLocaleString(), true);
 
-        const cumulative: Record<string, number> = {};
-        const values = interaction.client.guilds.cache.values();
-        for (const guild of values) {
-            const guildStats = await getStats(guild.id);
-            if (!guildStats || !guildStats.commands) continue;
-            for (const commandName in guildStats.commands) {
-                if (!cumulative[commandName]) cumulative[commandName] = guildStats.commands[commandName];
-                else cumulative[commandName] = cumulative[commandName] + guildStats.commands[commandName];
-            }
-        }
-
-        const dmStats = await getStats(interaction.client.user.id);
-        if (dmStats && dmStats.commands) {
-            for (const commandName in dmStats.commands) {
-                if (!cumulative[commandName]) cumulative[commandName] = dmStats.commands[commandName];
-                else cumulative[commandName] = cumulative[commandName] + dmStats.commands[commandName];
-            }
-        }
-
+        const cumulative = aggregateStats();
         const commandsRun = Object.values(cumulative).reduce((a, b) => a + b, 0).toLocaleString();
         addField(`Commands Run`, commandsRun, true);
 

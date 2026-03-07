@@ -2,7 +2,7 @@ import path from "path";
 import {fileURLToPath} from "url";
 import {Database} from "bun:sqlite";
 import {drizzle} from "drizzle-orm/bun-sqlite";
-import {eq, sql} from "drizzle-orm";
+import {eq, sql, sum} from "drizzle-orm";
 import * as schema from "./schema";
 import type {ProfileData, CommandStats} from "./types";
 
@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const dbPath = path.resolve(__dirname, "..", "settings.sqlite3");
 
 // Open (or create) the SQLite database file
-const sqlite = new Database(dbPath, {create: true});
+export const sqlite = new Database(dbPath, {create: true});
 
 // Enable WAL mode for better concurrent read performance
 sqlite.exec("PRAGMA journal_mode = WAL;");
@@ -102,9 +102,26 @@ export function incrementStat(key: string, commandName: string): void {
         .values({key, command: commandName, count: 1})
         .onConflictDoUpdate({
             target: [schema.commandStats.key, schema.commandStats.command],
-            set: {count: sql`count + 1`},
+            set: {count: sql`${schema.commandStats.count} + 1`},
         })
         .run();
+}
+
+/**
+ * Return cumulative command usage counts aggregated across all keys
+ * (guilds + DM context) in a single SQL query.
+ */
+export function aggregateStats(): NonNullable<CommandStats["commands"]> {
+    const rows = db.select({
+        command: schema.commandStats.command,
+        total: sum(schema.commandStats.count),
+    }).from(schema.commandStats).groupBy(schema.commandStats.command).all();
+
+    const commands: NonNullable<CommandStats["commands"]> = {};
+    for (const row of rows) {
+        if (row.total !== null) commands[row.command] = Number(row.total);
+    }
+    return commands;
 }
 
 // ---------------------------------------------------------------------------

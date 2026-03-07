@@ -12,13 +12,9 @@
  * The original `keyv` table is left untouched so a rollback is possible.
  */
 
-import path from "path";
-import {fileURLToPath} from "url";
-import {Database} from "bun:sqlite";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dbPath = path.resolve(__dirname, "..", "settings.sqlite3");
+// Importing sqlite from src/db.ts has the side-effect of opening the database
+// and running CREATE TABLE IF NOT EXISTS for all tables, so no DDL is needed here.
+import {sqlite} from "../src/db";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -33,72 +29,26 @@ function parseKeyvValue<T>(raw: string): T | undefined {
     }
 }
 
-// ── open database ──────────────────────────────────────────────────────────
-
-console.log(`Opening database at: ${dbPath}`);
-
-let db: Database;
-try {
-    db = new Database(dbPath);
-}
-catch (err) {
-    console.error("Could not open database – has the bot run at least once?", err);
-    process.exit(1);
-}
-
 // ── check whether the legacy keyv table exists ─────────────────────────────
 
-const tableCheck = db.query<{name: string}, []>(
+const tableCheck = sqlite.query<{name: string}, []>(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='keyv';"
 ).get();
 
 if (!tableCheck) {
     console.log("No legacy 'keyv' table found. Nothing to migrate.");
-    db.close();
     process.exit(0);
 }
-
-// ── ensure destination tables exist (matches src/db.ts) ────────────────────
-
-db.exec(`
-    CREATE TABLE IF NOT EXISTS profiles (
-        user_id    TEXT PRIMARY KEY,
-        forehand   TEXT,
-        backhand   TEXT,
-        blade      TEXT,
-        strengths  TEXT,
-        weaknesses TEXT,
-        playstyle  TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS command_stats (
-        key     TEXT NOT NULL,
-        command TEXT NOT NULL,
-        count   INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (key, command)
-    );
-
-    CREATE TABLE IF NOT EXISTS user_install_notices (
-        user_id TEXT PRIMARY KEY
-    );
-
-    CREATE TABLE IF NOT EXISTS revspin_cache (
-        id       INTEGER PRIMARY KEY AUTOINCREMENT,
-        category TEXT NOT NULL,
-        name     TEXT NOT NULL,
-        href     TEXT NOT NULL
-    );
-`);
 
 // ── read all rows from the keyv table ──────────────────────────────────────
 
 interface KeyvRow {key: string; value: string}
-const rows = db.query<KeyvRow, []>("SELECT key, value FROM keyv;").all();
+const rows = sqlite.query<KeyvRow, []>("SELECT key, value FROM keyv;").all();
 console.log(`Found ${rows.length} rows in the legacy 'keyv' table.`);
 
 // ── prepare insert statements ──────────────────────────────────────────────
 
-const insertProfile = db.prepare(`
+const insertProfile = sqlite.prepare(`
     INSERT INTO profiles (user_id, forehand, backhand, blade, strengths, weaknesses, playstyle)
     VALUES ($userId, $forehand, $backhand, $blade, $strengths, $weaknesses, $playstyle)
     ON CONFLICT(user_id) DO UPDATE SET
@@ -110,13 +60,13 @@ const insertProfile = db.prepare(`
         playstyle  = excluded.playstyle;
 `);
 
-const insertStat = db.prepare(`
+const insertStat = sqlite.prepare(`
     INSERT INTO command_stats (key, command, count)
     VALUES ($key, $command, $count)
     ON CONFLICT(key, command) DO UPDATE SET count = count + excluded.count;
 `);
 
-const insertNotice = db.prepare(`
+const insertNotice = sqlite.prepare(`
     INSERT INTO user_install_notices (user_id) VALUES ($userId)
     ON CONFLICT(user_id) DO NOTHING;
 `);
@@ -128,7 +78,7 @@ let stats = 0;
 let notices = 0;
 let skipped = 0;
 
-const migrate = db.transaction(() => {
+const migrate = sqlite.transaction(() => {
     for (const {key, value} of rows) {
         // keyv key format: "<namespace>:<id>"
         const colonIdx = key.indexOf(":");
@@ -186,4 +136,3 @@ console.log(`  Rows skipped             : ${skipped}`);
 console.log("\nThe legacy 'keyv' table has been left intact.");
 console.log("You may DROP it manually once you are satisfied with the migration.");
 
-db.close();

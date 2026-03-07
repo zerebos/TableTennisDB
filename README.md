@@ -229,6 +229,8 @@ the explicitness of Drizzle pays for itself immediately.
 
 
 
+## 📄 License
+
 TableTennisDB is open source software licensed under the [MIT License](LICENSE).
 
 ---
