@@ -108,6 +108,7 @@ Perfect for:
 - **Discord.js** - Modern Discord API wrapper
 - **TypeScript** - Type-safe development
 - **Bun** - Fast JavaScript runtime
+- **Drizzle ORM** - Type-safe SQLite database layer
 - **RevSpin API** - Equipment database integration
 - **ITTF Data** - Official ranking information
 
@@ -136,6 +137,97 @@ TableTennisDB is actively maintained and updated. For bug reports, feature reque
 4. Submit pull requests for improvements
 
 We welcome contributions from the table tennis and Discord bot communities!
+
+## 🗄️ Database
+
+### Running the one-time migration
+
+If you have an existing `settings.sqlite3` created by the old **keyv** backend, run the
+migration script once before starting the bot.  It copies all data from the flat `keyv`
+table into the new normalised tables and is fully idempotent:
+
+```bash
+bun run migrate
+```
+
+The original `keyv` table is left intact so you can roll back if needed.  Once you are
+happy with the migration you can remove it manually:
+
+```sql
+DROP TABLE keyv;
+```
+
+---
+
+## 🔬 keyv vs. Drizzle ORM – Analysis & Recommendation
+
+### Approach A – keyv + SQLite (original)
+
+**How it worked:** The project used [keyv](https://github.com/jaredwray/keyv) as a generic
+key-value store backed by `@keyv/sqlite`.  Each "namespace" (profiles, stats,
+userInstallNotices) was a virtual partition of a single `keyv` table.  All values were
+stored as JSON blobs.
+
+| Aspect | Detail |
+|--------|--------|
+| **Schema** | None – flat `key TEXT, value TEXT` table |
+| **Type-safety** | Zero – values are `unknown` blobs; callers cast at read time |
+| **Query power** | Key lookups only – no filtering, aggregation, or joins |
+| **Stats aggregation** | Full scan of all guilds in application code |
+| **Dependencies** | `keyv`, `@keyv/sqlite`, `sqlite3` (native addon) |
+| **Setup** | One import, zero config |
+| **Migration** | Not applicable (schema-less) |
+
+### Approach B – Drizzle ORM + bun:sqlite (this PR)
+
+**How it works:** The codebase now uses [Drizzle ORM](https://orm.drizzle.team) with the
+native `bun:sqlite` driver.  Each domain concept is a proper table defined in
+`src/schema.ts` with typed columns.  The `src/db.ts` module exposes typed helper
+functions instead of generic get/set.
+
+| Aspect | Detail |
+|--------|--------|
+| **Schema** | Explicit typed tables with primary keys and constraints |
+| **Type-safety** | Full – query results are typed; no runtime casts needed |
+| **Query power** | Full SQL via Drizzle's query builder (filters, joins, aggregations) |
+| **Stats writes** | Single atomic `INSERT … ON CONFLICT DO UPDATE SET count = count + 1` |
+| **Dependencies** | `drizzle-orm` only (uses Bun's built-in `bun:sqlite`) |
+| **Setup** | Schema file + `CREATE TABLE IF NOT EXISTS` on startup |
+| **Migration** | `bun run migrate` (one-time, idempotent) |
+
+### ✅ Recommendation: **Drizzle ORM**
+
+For this project, **Drizzle ORM is the better long-term choice** for the following reasons:
+
+1. **Type-safety with zero overhead.** The old keyv approach required `as SomeType` casts
+   at every read site and gave no compile-time guarantee that the stored data matched the
+   expected shape.  Drizzle derives column types directly from the schema; a typo in a
+   column name is a compile error, not a runtime surprise.
+
+2. **Leaner dependency tree.** `@keyv/sqlite` pulled in the native `sqlite3` npm package
+   which required compiling C++ bindings and had its own `overrides` workaround in
+   `package.json`.  Drizzle uses Bun's built-in SQLite engine, removing an entire layer
+   of native dependencies.
+
+3. **Proper data modelling.** Profiles, stats, and notices are distinct entities with
+   clear primary keys.  Drizzle makes this explicit in `src/schema.ts`, which serves as
+   living documentation of the data model.
+
+4. **Efficient writes.** The stats increment is now a single atomic SQL upsert
+   (`INSERT … ON CONFLICT DO UPDATE SET count = count + 1`) instead of a read → mutate
+   → write round-trip, which is both faster and race-condition-free.
+
+5. **Future extensibility.** Adding indices, foreign keys, new columns, or cross-table
+   queries is straightforward with Drizzle.  With keyv it would require JSON reshaping
+   or namespace juggling.
+
+**Trade-off:** Drizzle does require an explicit schema and a one-time migration for
+existing data.  For a brand-new project that purely needed ephemeral key-value storage,
+keyv's zero-config approach would be perfectly fine.  Given that this project already
+has defined data shapes (ProfileData, CommandStats) and will likely grow over time,
+the explicitness of Drizzle pays for itself immediately.
+
+
 
 ## 📄 License
 
