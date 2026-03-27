@@ -10,7 +10,8 @@
     "deploy": "bun run --bun scripts/deploy-commands.ts",
     "clear": "bun run --bun scripts/deploy-commands.ts --clear",
     "validate": "bun run --bun scripts/validate-env.ts",
-    "migrate": "bun run --bun scripts/migrate.ts"
+    "migrate": "bun run --bun scripts/migrate.ts",
+    "panel": "bun run --bun scripts/panel.ts"
   },
   "author": "Zack Rauen",
   "license": "MIT",

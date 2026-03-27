@@ -7,7 +7,7 @@
  *   bun run migrate
  *
  * The script is idempotent – it is safe to run multiple times because all
- * inserts use ON CONFLICT DO NOTHING / REPLACE semantics.
+ * inserts use ON CONFLICT DO NOTHING / DO UPDATE semantics as appropriate.
  *
  * The original `keyv` table is left untouched so a rollback is possible.
  */

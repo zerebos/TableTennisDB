@@ -12,7 +12,7 @@ export default {
         if (interaction.isChatInputCommand()) {
             commandName = interaction.commandName;
             executor = "execute";
-            await this.addStat(interaction);
+            this.addStat(interaction);
         }
         else if (interaction.isAutocomplete()) {
             commandName = interaction.commandName;
@@ -43,10 +43,15 @@ export default {
         }
     },
 
-    async addStat(interaction: ChatInputCommandInteraction) {
+    addStat(interaction: ChatInputCommandInteraction) {
         const key = interaction.guildId ?? interaction.client.user?.id;
         if (!key) return;
         const name = interaction.commandName;
-        incrementStat(key, name);
+        try {
+            incrementStat(key, name);
+        }
+        catch (error) {
+            console.error("Failed to increment stat", {key, name, error});
+        }
     }
 };
