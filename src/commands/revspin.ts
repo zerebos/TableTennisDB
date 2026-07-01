@@ -1,7 +1,7 @@
 import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder, ChatInputCommandInteraction, InteractionContextType, ApplicationIntegrationType} from "discord.js";
-import Similarity from "string-similarity";
 import {getText} from "../http";
 import {load} from "cheerio";
+import * as revspin from "../revspin";
 import type {RevspinCacheEntry} from "../types";
 
 export default {
@@ -16,22 +16,10 @@ export default {
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
         let query = interaction.options.getString("query", true).toLowerCase();
-        const cachedCategories = Object.keys(interaction.client.revspin);
-        const category = cachedCategories.find(c => c === query.split(" ")[0]);
+        const category = revspin.categoryNames().find(c => c === query.split(" ")[0]);
         if (category) query = query.split(" ").slice(1).join(" ");
 
-
-        const all = Object.keys(interaction.client.revspin).map(c => interaction.client.revspin[c]).flat();
-        all.forEach(i => {i.similarity = 0;}); // Reset similarity scores
-
-        const group = category ? interaction.client.revspin[category] : all;
-        const results = group.sort((a, b) => {
-            a.similarity = Similarity.compareTwoStrings(query, a.name.toLowerCase()) * 100;
-            b.similarity = Similarity.compareTwoStrings(query, b.name.toLowerCase()) * 100;
-            if (a.similarity === b.similarity) return 0;
-            else if (a.similarity < b.similarity) return 1;
-            return -1;
-        });
+        const results = revspin.search(query, category);
 
         const command = interaction.options.getSubcommand();
         if (command === "search") return await this.search(interaction, {query, category, results});

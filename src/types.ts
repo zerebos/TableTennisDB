@@ -27,7 +27,6 @@ declare module "discord.js" {
     interface Client {
         cpuUsage: NodeJS.CpuUsage;
         commands: Collection<string, CommandModule>
-        revspin: Record<string, RevspinCacheEntry[]>;
     }
 }
 
