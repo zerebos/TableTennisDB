@@ -7,45 +7,39 @@ export default {
     name: "interactionCreate",
 
     async execute(interaction: Interaction) {
-        let commandName = "";
-        let executor: "execute" | "autocomplete" | "button" | "modal" = "execute";
-
+        // Buttons, modals, and select menus are handled locally by the command
+        // that created them (via collectors), so the global router only cares
+        // about slash commands and their autocomplete.
         if (interaction.isChatInputCommand()) {
-            commandName = interaction.commandName;
-            executor = "execute";
             await this.addStat(interaction);
-        }
-        else if (interaction.isAutocomplete()) {
-            commandName = interaction.commandName;
-            executor = "autocomplete";
-        }
-        else if (interaction.isButton()) {
-            executor = "button";
-            commandName = interaction.customId.split("-")[0];
-        }
-        else if (interaction.isModalSubmit()) {
-            executor = "modal";
-            commandName = interaction.customId.split("-")[0];
-        }
-
-        const command = interaction.client.commands.get(commandName);
-        if (!commandName || !command || !command[executor]) {
-            console.error("Unrecognized interaction", commandName, executor, interaction);
-            if (interaction.isChatInputCommand() && interaction.isRepliable()) await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", flags: MessageFlags.Ephemeral});
+            const command = interaction.client.commands.get(interaction.commandName);
+            if (!command) {
+                console.error("Unrecognized command", interaction.commandName);
+                return await interaction.reply({content: "Something went wrong! If this persists, please report it to the bot owner!", flags: MessageFlags.Ephemeral});
+            }
+            try {
+                await command.execute(interaction);
+            }
+            catch (error) {
+                console.error(error);
+                const content = "There was an error while executing this command!";
+                // Most commands defer or reply before doing work, so a plain reply()
+                // here would throw "already replied" and swallow the real error.
+                if (interaction.replied || interaction.deferred) await interaction.followUp({content, flags: MessageFlags.Ephemeral});
+                else await interaction.reply({content, flags: MessageFlags.Ephemeral});
+            }
             return;
         }
 
-        try {
-            await command[executor](interaction);
-        }
-        catch (error) {
-            console.error(error);
-            if (!interaction.isRepliable()) return;
-            const content = "There was an error while executing this command!";
-            // Most commands defer or reply before doing work, so a plain reply()
-            // here would throw "already replied" and swallow the real error.
-            if (interaction.replied || interaction.deferred) await interaction.followUp({content, flags: MessageFlags.Ephemeral});
-            else await interaction.reply({content, flags: MessageFlags.Ephemeral});
+        if (interaction.isAutocomplete()) {
+            const command = interaction.client.commands.get(interaction.commandName);
+            if (!command?.autocomplete) return;
+            try {
+                await command.autocomplete(interaction);
+            }
+            catch (error) {
+                console.error(error);
+            }
         }
     },
 

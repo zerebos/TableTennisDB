@@ -1,7 +1,10 @@
-import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, CommandInteraction, ChatInputCommandInteraction, ButtonInteraction, ApplicationIntegrationType, InteractionContextType, type ModalMessageModalSubmitInteraction, MessageFlags} from "discord.js";
+import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType, MessageFlags} from "discord.js";
 import {profiles, userInstallNotices} from "../db";
 import type {ProfileData} from "../types";
 
+
+const GEAR_FIELDS = ["forehand", "backhand", "blade"] as const;
+const SKILL_FIELDS = ["strengths", "weaknesses", "playstyle"] as const;
 
 function createProfileEmbed(user: {username: string, avatarURL: () => (string | null)}, profile: ProfileData) {
     return new EmbedBuilder()
@@ -18,6 +21,26 @@ function createProfileEmbed(user: {username: string, avatarURL: () => (string | 
         );
 }
 
+// Build a modal prefilled from the current draft. Fields are optional so a
+// user can tweak one value without being forced to refill the others.
+function buildModal(kind: "gear" | "skills", draft: ProfileData) {
+    const fields = kind === "gear" ? GEAR_FIELDS : SKILL_FIELDS;
+    const modal = new ModalBuilder()
+        .setCustomId(`profile-${kind}`)
+        .setTitle(kind === "gear" ? "Add Your Gear" : "Add Your Skills");
+    modal.addComponents(...fields.map(field =>
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+            new TextInputBuilder()
+                .setCustomId(field)
+                .setLabel(field[0].toUpperCase() + field.slice(1))
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setValue(draft[field] ?? "")
+        )
+    ));
+    return modal;
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName("profile")
@@ -31,8 +54,7 @@ export default {
         .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
         .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel),
 
-    async execute(interaction: CommandInteraction) {
-        if (!interaction.isChatInputCommand()) return;
+    async execute(interaction: ChatInputCommandInteraction) {
         const command = interaction.options.getSubcommand();
         if (command === "view") return await this.view(interaction);
         if (command === "edit") return await this.edit(interaction);
@@ -56,84 +78,59 @@ export default {
     },
 
     async edit(interaction: ChatInputCommandInteraction) {
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder().setCustomId("profile-save").setLabel("Save").setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId("profile-gear").setLabel("Edit Gear").setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId("profile-skills").setLabel("Edit Skills").setStyle(ButtonStyle.Secondary),
+        // Ephemeral edit session: `draft` is the single source of truth, the
+        // embed is only a rendering of it, and nothing is persisted until the
+        // user hits Save. Everything is handled by a collector on this one
+        // message, so no global component routing is involved.
+        const draft = (await profiles.get(interaction.user.id) as ProfileData | undefined) ?? {};
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder().setCustomId("profile-save").setLabel("Save").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("profile-gear").setLabel("Edit Gear").setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId("profile-skills").setLabel("Edit Skills").setStyle(ButtonStyle.Secondary),
         );
 
-        const profile = await profiles.get(interaction.user.id) ?? {};
-        const profileEmbed = createProfileEmbed(interaction.user, profile);
-        profileEmbed.setFooter({text: "💡 Suggest profile features on Discord or GitHub - See /about for links."});
-        await interaction.reply({embeds: [profileEmbed], components: [row], flags: MessageFlags.Ephemeral});
-    },
+        const buildEmbed = () => createProfileEmbed(interaction.user, draft)
+            .setFooter({text: "💡 Suggest profile features on Discord or GitHub - See /about for links."});
 
-    /**
-     * @param interaction {import("discord.js").ButtonInteraction}
-     */
-    async button(interaction: ButtonInteraction) {
-        const id = interaction.customId.split("-")[1];
-        const profile = await profiles.get(interaction.user.id) ?? {};
+        await interaction.reply({embeds: [buildEmbed()], components: [row], flags: MessageFlags.Ephemeral});
+        const message = await interaction.fetchReply();
 
-        if (id === "gear") {
-            const modal = new ModalBuilder().setTitle("Add Your Gear").setCustomId("profile-gear");
-            const forehand = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("forehand").setLabel("Forehand").setStyle(TextInputStyle.Short).setValue(profile.forehand ?? ""));
-            const backhand = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("backhand").setLabel("Backhand").setStyle(TextInputStyle.Short).setValue(profile.backhand ?? ""));
-            const blade = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("blade").setLabel("Blade").setStyle(TextInputStyle.Short).setValue(profile.blade ?? ""));
-            modal.addComponents(forehand, backhand, blade);
-            await interaction.showModal(modal);
-        }
-        if (id === "skills") {
-            const modal = new ModalBuilder().setTitle("Add Your Skills").setCustomId("profile-skills");
-            const strengths = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("strengths").setLabel("Strengths").setStyle(TextInputStyle.Short).setValue(profile.strengths ?? ""));
-            const weaknesses = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("weaknesses").setLabel("Weaknesses").setStyle(TextInputStyle.Short).setValue(profile.weaknesses ?? ""));
-            const playstyle = new ActionRowBuilder<TextInputBuilder>().addComponents(new TextInputBuilder().setCustomId("playstyle").setLabel("Playstyle").setStyle(TextInputStyle.Short).setValue(profile.playstyle ?? ""));
-            modal.addComponents(strengths, weaknesses, playstyle);
-            await interaction.showModal(modal);
-        }
-        if (id === "save") {
-            const data: Record<string, string> = {};
-            interaction.message.embeds[0].fields.forEach(f => data[f.name.toLowerCase()] = f.value);
-            await profiles.set(interaction.user.id, data);
-            await interaction.update({embeds: [new EmbedBuilder().setColor("Green").setDescription("Profile saved successfully!")], components: []});
-        }
-    },
+        const collector = message.createMessageComponentCollector({
+            filter: i => i.user.id === interaction.user.id,
+            idle: 300_000,
+        });
 
-    /**
-     * @param interaction {import("discord.js").ModalMessageModalSubmitInteraction}
-     */
-    async modal(interaction: ModalMessageModalSubmitInteraction) {
-    const id = interaction.customId.split("-")[1];
-    if (id === "skills") return await this.skills(interaction);
-    return await this.gear(interaction);
-    },
+        let saved = false;
+        collector.on("collect", async i => {
+            if (!i.isButton()) return;
+            const kind = i.customId.split("-")[1];
 
-    /**
-     * @param interaction {import("discord.js").ModalMessageModalSubmitInteraction}
-     */
-    async gear(interaction: ModalMessageModalSubmitInteraction) {
-        const forehand = interaction.fields.getTextInputValue("forehand");
-        const backhand = interaction.fields.getTextInputValue("backhand");
-        const blade = interaction.fields.getTextInputValue("blade");
-        interaction.message!.embeds[0].fields[0].value = forehand;
-        interaction.message!.embeds[0].fields[1].value = backhand;
-        interaction.message!.embeds[0].fields[2].value = blade;
-        const newEmbed = EmbedBuilder.from(interaction.message!.embeds[0]);
-        await interaction.update({embeds: [newEmbed]});
-    },
+            if (kind === "save") {
+                await profiles.set(interaction.user.id, draft);
+                await i.update({embeds: [new EmbedBuilder().setColor("Green").setDescription("Profile saved successfully!")], components: []});
+                saved = true;
+                return collector.stop();
+            }
 
-    /**
-     * @param interaction {import("discord.js").ModalMessageModalSubmitInteraction}
-     */
-    async skills(interaction: ModalMessageModalSubmitInteraction) {
-        const strengths = interaction.fields.getTextInputValue("strengths");
-        const weaknesses = interaction.fields.getTextInputValue("weaknesses");
-        const playstyle = interaction.fields.getTextInputValue("playstyle");
-        interaction.message!.embeds[0].fields[3].value = strengths;
-        interaction.message!.embeds[0].fields[4].value = weaknesses;
-        interaction.message!.embeds[0].fields[5].value = playstyle;
-        const newEmbed = EmbedBuilder.from(interaction.message!.embeds[0]);
-        await interaction.update({embeds: [newEmbed]});
+            // gear | skills: open a prefilled modal and wait for its submission.
+            await i.showModal(buildModal(kind as "gear" | "skills", draft));
+            const submitted = await i.awaitModalSubmit({
+                time: 120_000,
+                filter: s => s.customId === `profile-${kind}` && s.user.id === i.user.id,
+            }).catch(() => null);
+            if (!submitted || !submitted.isFromMessage()) return; // dismissed or timed out
+
+            for (const field of (kind === "gear" ? GEAR_FIELDS : SKILL_FIELDS)) {
+                draft[field] = submitted.fields.getTextInputValue(field);
+            }
+            await submitted.update({embeds: [buildEmbed()], components: [row]});
+        });
+
+        collector.on("end", async () => {
+            // Strip the now-dead buttons if the session expired without a save.
+            if (saved) return;
+            await interaction.editReply({components: []}).catch(() => {});
+        });
     },
 };
