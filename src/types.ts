@@ -47,12 +47,6 @@ export interface EventModule {
     execute: (...args: unknown[]) => Promise<void>;
 }
 
-export interface CommandStats {
-    commands?: {
-        [key: string]: number;
-    }
-}
-
 
 /**
  * @example

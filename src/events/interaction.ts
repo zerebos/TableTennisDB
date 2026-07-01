@@ -1,6 +1,5 @@
 import {type Interaction, ChatInputCommandInteraction, MessageFlags} from "discord.js";
-import type {CommandStats} from "../types";
-import {stats} from "../db";
+import {recordCommand} from "../db";
 
 
 export default {
@@ -11,7 +10,7 @@ export default {
         // that created them (via collectors), so the global router only cares
         // about slash commands and their autocomplete.
         if (interaction.isChatInputCommand()) {
-            await this.addStat(interaction);
+            this.addStat(interaction);
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) {
                 console.error("Unrecognized command", interaction.commandName);
@@ -43,20 +42,10 @@ export default {
         }
     },
 
-    async addStat(interaction: ChatInputCommandInteraction) {
-        const key = interaction.guildId ?? interaction.client.user?.id;
-        const name = interaction.commandName;
-
-        // More type-safe approach
-        const existingData = await stats.get(key) as CommandStats | undefined;
-        const data: CommandStats = existingData ?? {commands: {}};
-
-        // Ensure commands object exists
-        data.commands ??= {};
-
-        // Increment command count
-        data.commands[name] = (data.commands[name] ?? 0) + 1;
-
-        await stats.set(key, data);
+    addStat(interaction: ChatInputCommandInteraction) {
+        // Guild commands bucket per guild; DM/user-install usage buckets under
+        // the bot's own id (there's no guild to attribute it to).
+        const scope = interaction.guildId ?? interaction.client.user.id;
+        recordCommand(scope, interaction.commandName);
     }
 };

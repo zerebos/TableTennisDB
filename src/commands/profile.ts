@@ -1,5 +1,5 @@
 import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType, MessageFlags} from "discord.js";
-import {profiles, userInstallNotices} from "../db";
+import {getProfile, setProfile, hasSeenInstallNotice, markInstallNoticeSeen} from "../db";
 import type {ProfileData} from "../types";
 
 
@@ -62,7 +62,7 @@ export default {
 
     async view(interaction: ChatInputCommandInteraction) {
         const user = interaction.options.getUser("user") ?? interaction.user;
-        const profile = await profiles.get(user.id) as ProfileData | undefined;
+        const profile = getProfile(user.id);
 
         if (!profile) {
             const noEmbed = new EmbedBuilder().setColor("Red").setDescription("No profile found, please set one up using `/profile edit`!");
@@ -70,9 +70,8 @@ export default {
         }
 
         await interaction.reply({embeds: [createProfileEmbed(user, profile)]});
-        const hasShownNotice = await userInstallNotices.get(interaction.user.id);
-        if (!hasShownNotice) {
-            await userInstallNotices.set(interaction.user.id, true);
+        if (!hasSeenInstallNotice(interaction.user.id)) {
+            markInstallNoticeSeen(interaction.user.id);
             await interaction.followUp({content: `**New!** Add TableTennisDB to your account for DM access and cross-server profiles!\n\nClick my profile → "Add App" → "Add to My Apps"`, flags: MessageFlags.Ephemeral});
         }
     },
@@ -82,7 +81,7 @@ export default {
         // embed is only a rendering of it, and nothing is persisted until the
         // user hits Save. Everything is handled by a collector on this one
         // message, so no global component routing is involved.
-        const draft = (await profiles.get(interaction.user.id) as ProfileData | undefined) ?? {};
+        const draft = getProfile(interaction.user.id) ?? {};
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId("profile-save").setLabel("Save").setStyle(ButtonStyle.Success),
@@ -107,7 +106,7 @@ export default {
             const kind = i.customId.split("-")[1];
 
             if (kind === "save") {
-                await profiles.set(interaction.user.id, draft);
+                setProfile(interaction.user.id, draft);
                 await i.update({embeds: [new EmbedBuilder().setColor("Green").setDescription("Profile saved successfully!")], components: []});
                 saved = true;
                 return collector.stop();
