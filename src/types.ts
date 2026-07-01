@@ -1,5 +1,5 @@
 // src/types.ts
-import {AutocompleteInteraction, BaseInteraction, ButtonInteraction, ChatInputCommandInteraction, Collection, ModalSubmitInteraction, SlashCommandBuilder} from "discord.js";
+import {AutocompleteInteraction, ChatInputCommandInteraction, Collection, SlashCommandBuilder} from "discord.js";
 
 export interface ProfileData {
     forehand?: string;
@@ -27,29 +27,23 @@ declare module "discord.js" {
     interface Client {
         cpuUsage: NodeJS.CpuUsage;
         commands: Collection<string, CommandModule>
-        revspin: Record<string, RevspinCacheEntry[]>;
     }
 }
 
+// Components (buttons, modals, selects) are handled locally by the command
+// that creates them via collectors, so they are not part of this contract —
+// only the two interaction kinds the global router dispatches are.
 export type CommandModule = {
     data: SlashCommandBuilder;
     owner?: boolean;
-    execute: <T extends BaseInteraction = ChatInputCommandInteraction>(interaction: T) => Promise<void>;
-    autocomplete: <T extends BaseInteraction = AutocompleteInteraction>(i: T) => unknown;
-    button: <T extends BaseInteraction = ButtonInteraction>(i: T) => unknown;
-    modal: <T extends BaseInteraction = ModalSubmitInteraction>(i: T) => unknown;
+    execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+    autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
 }
 
 export interface EventModule {
     name: string;
     once?: boolean;
     execute: (...args: unknown[]) => Promise<void>;
-}
-
-export interface CommandStats {
-    commands?: {
-        [key: string]: number;
-    }
 }
 
 

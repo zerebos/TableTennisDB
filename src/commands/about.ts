@@ -1,11 +1,8 @@
-import childProcess from "child_process";
-import {promisify} from "util";
+import {$} from "bun";
 import {SlashCommandBuilder, EmbedBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
-import type {CommandStats} from "../types";
-import {stats} from "../db";
+import {getCommandTotals} from "../db";
 
 
-const exec = promisify(childProcess.exec);
 const inviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&permissions=${process.env.BOT_PERMISSIONS || "0"}&scope=bot%20applications.commands`;
 const userInviteLink = `https://discord.com/oauth2/authorize?client_id=${process.env.BOT_CLIENT_ID}&integration_type=1&scope=applications.commands`;
 
@@ -33,13 +30,11 @@ export default {
 
         if (process.env.BOT_DESCRIPTION) addField(`About`, process.env.BOT_DESCRIPTION);
 
-        // git show -s -3 --format="%s (%cr)"
         try {
-            const gitExists = await exec("git status");
-            if (gitExists.stderr) throw new Error(gitExists.stderr);
-            const gitInfo = await exec(`git show -s -3 --format="%s (%cr)"`);
-            if (gitInfo.stderr) throw new Error(gitExists.stderr);
-            addField(`Latest Changes`, gitInfo.stdout.trim()); // To add bullets .split("\n").map(l => `- ${l}`).join("\n")
+            // Fails (and is caught) if this isn't a git checkout.
+            await $`git status`.quiet();
+            const gitInfo = await $`git show -s -3 --format=${"%s (%cr)"}`.quiet().text();
+            addField(`Latest Changes`, gitInfo.trim()); // To add bullets .split("\n").map(l => `- ${l}`).join("\n")
         }
         catch (err) {
             console.error(err);
@@ -83,25 +78,7 @@ export default {
 
         addField(`Emojis`, interaction.client.emojis.cache.size.toLocaleString(), true);
 
-        const cumulative: CommandStats["commands"] = {};
-        const values = interaction.client.guilds.cache.values();
-        for (const guild of values) {
-            const guildStats = await stats.get(guild.id) as CommandStats | undefined;
-            if (!guildStats || !guildStats.commands) continue;
-            for (const commandName in guildStats.commands) {
-                if (!cumulative[commandName]) cumulative[commandName] = guildStats.commands[commandName];
-                else cumulative[commandName] = cumulative[commandName] + guildStats.commands[commandName];
-            }
-        }
-
-        const dmStats = await stats.get(interaction.client.user.id) as CommandStats | undefined;
-        if (dmStats && dmStats.commands) {
-            for (const commandName in dmStats.commands) {
-                if (!cumulative[commandName]) cumulative[commandName] = dmStats.commands[commandName];
-                else cumulative[commandName] = cumulative[commandName] + dmStats.commands[commandName];
-            }
-        }
-
+        const cumulative = getCommandTotals();
         const commandsRun = Object.values(cumulative).reduce((a, b) => a + b, 0).toLocaleString();
         addField(`Commands Run`, commandsRun, true);
 

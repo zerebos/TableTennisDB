@@ -1,7 +1,7 @@
 // TODO: remove this override after fixing types
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
-import https from "https";
+import {getJSON} from "../http";
 
 
 // Instead of: Men's Singles - Semifinal - Match 1
@@ -47,35 +47,20 @@ const formatGameScores = (result: any) => {
     return `${playerA}\n${playerB}`;
 };
 
-// Utility routine with minimal validation
-const getJSON = async (url: string, validator = (c: any) => c) => {
-    const parsed = new URL(url);
-    const rawResponse = await new Promise<string>(resolve => {
-        https.get({
-            host: parsed.host,
-            path: parsed.pathname + parsed.search,
-            headers: {
-                "accept": "application/json",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
-                "host": "wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net",
-                "origin": "https://worldtabletennis.com",
-                "referer": "https://worldtabletennis.com/",
-            }
-        }).on("response", function (response) {
-            let body = "";
-            response.on("data", (chunk) => body += chunk);
-            response.on("end", () => resolve(body));
-        });
-    });
+const WTT_HEADERS = {
+    "accept": "application/json",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
+    "origin": "https://worldtabletennis.com",
+    "referer": "https://worldtabletennis.com/",
+};
 
-    // console.log(rawResponse);
-
-    let json;
+// Utility routine with minimal validation; returns null on any failure.
+const fetchJSON = async (url: string, validator = (c: any) => c) => {
     try {
-        json = JSON.parse(rawResponse);
+        const json = await getJSON<any>(url, WTT_HEADERS);
         if (validator(json)) return json;
         console.error("JSON Validator Failed");
-        throw new Error("JSON Validator Failed");
+        return null;
     }
     catch {
         return null;
@@ -116,7 +101,7 @@ export default {
 
         // Get most recent/current event ID
         const isValidEvent = (json: any[]) => json.length && json[0]?.eventId;
-        const eventInfo = await getJSON(`https://wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net/api/cms/GetLiveEventWithKey?Key=live_results_event_id`, isValidEvent);
+        const eventInfo = await fetchJSON(`https://wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net/api/cms/GetLiveEventWithKey?Key=live_results_event_id`, isValidEvent);
         if (!eventInfo) {
             const failEmbed = new EmbedBuilder().setColor("Red").setDescription("Could not get current event info!");
             return await interaction.editReply({embeds: [failEmbed]});
@@ -125,7 +110,7 @@ export default {
 
         // Use event info to get results from event
         const isValidResult = (json: any[]) => json.length && json[0]?.match_card;
-        const results = await getJSON(`https://wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net/api/cms/GetOfficialResult?EventId=${eventInfo[0].eventId}&include_match_card=true&take=10`, isValidResult);
+        const results = await fetchJSON(`https://wtt-website-live-events-api-prod-cmfzgabgbzhphabb.eastasia-01.azurewebsites.net/api/cms/GetOfficialResult?EventId=${eventInfo[0].eventId}&include_match_card=true&take=10`, isValidResult);
         if (!results) {
             const failEmbed = new EmbedBuilder().setColor("Blue").setDescription("Current event has not yet started!");
             return await interaction.editReply({embeds: [failEmbed]});
