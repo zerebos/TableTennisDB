@@ -4,7 +4,6 @@ import {fileURLToPath, pathToFileURL} from "node:url";
 import {REST, type RESTPostAPIChatInputApplicationCommandsJSONBody} from "discord.js";
 import {API} from "@discordjs/core";
 import type {CommandModule} from "../src/types";
-import "dotenv/config";
 
 
 // Check CLI arguments for clear flag

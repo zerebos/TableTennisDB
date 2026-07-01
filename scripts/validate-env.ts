@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 const snowflakeRegex = /^[0-9]{15,}$/;
 
 if (!process.env.BOT_CLIENT_ID) {

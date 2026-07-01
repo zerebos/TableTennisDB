@@ -5,7 +5,6 @@ import {fileURLToPath, pathToFileURL} from "node:url";
 // Import the necessary discord.js classes
 import {Client, Collection, GatewayIntentBits} from "discord.js";
 
-import "dotenv/config";
 import type {CommandModule} from "./types";
 
 const __filename = fileURLToPath(import.meta.url);
