@@ -1,5 +1,5 @@
 import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
-import https from "https";
+import {getJSON} from "../http";
 import type {NCTTAPlayer} from "../types";
 
 
@@ -28,13 +28,7 @@ export default {
         await interaction.deferReply();
         const query = interaction.options.getString("query")!.trim();
         const url = search(query);
-        const players = await new Promise<NCTTAPlayer[]>(resolve => {
-            https.get(url).on("response", function(response) {
-                let body = "";
-                response.on("data", (chunk) => body += chunk);
-                response.on("end", () => resolve(JSON.parse(body)));
-            });
-        });
+        const players = await getJSON<NCTTAPlayer[]>(url);
 
         if (players.length === 0) return await interaction.editReply("Did not find any players with this name, please check your spelling and try again!");
         if (players.length > 3) return await interaction.editReply("Found too many players, please try a more specific search!");

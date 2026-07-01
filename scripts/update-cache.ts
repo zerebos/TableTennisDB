@@ -1,8 +1,8 @@
-import https from "https";
 import {load} from "cheerio";
 import fs from "fs";
 import path from "path";
 import {fileURLToPath} from "url";
+import {getText} from "../src/http";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,24 +10,7 @@ const __dirname = path.dirname(__filename);
 const cacheFolder = path.resolve(__dirname, "..", ".revspin");
 const categories = ["rubber", "blade", "pips", "table", "balls", "shoes", "sponge", "trainingdvd", "robot", "net", "premade"];
 
-
-const fetch = async (url: string): Promise<string> => {
-    const parsed = new URL(url);
-    return await new Promise(resolve => {
-        https.get({
-            host: parsed.host,
-            path: parsed.pathname + parsed.search,
-            headers: {
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0"
-            }
-        }).on("response", function (response) {
-            let body = "";
-            response.on("data", (chunk) => body += chunk);
-            response.on("end", () => resolve(body));
-        });
-    });
-
-};
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0";
 
 async function updateCache() {
     if (!fs.existsSync(cacheFolder)) fs.mkdirSync(cacheFolder);
@@ -39,7 +22,7 @@ async function updateCache() {
         console.group();
 
         let stepEnd, stepStart = performance.now();
-        const html = await fetch(`https://revspin.net/${category}/`);
+        const html = await getText(`https://revspin.net/${category}/`, {"user-agent": USER_AGENT});
         stepEnd = performance.now();
         console.log(`✅ HTML fetched in ${stepEnd - stepStart}ms.`);
 

@@ -40,7 +40,12 @@ export default {
         }
         catch (error) {
             console.error(error);
-            if (interaction.isRepliable()) await interaction.reply({content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral});
+            if (!interaction.isRepliable()) return;
+            const content = "There was an error while executing this command!";
+            // Most commands defer or reply before doing work, so a plain reply()
+            // here would throw "already replied" and swallow the real error.
+            if (interaction.replied || interaction.deferred) await interaction.followUp({content, flags: MessageFlags.Ephemeral});
+            else await interaction.reply({content, flags: MessageFlags.Ephemeral});
         }
     },
 

@@ -1,5 +1,5 @@
 import {SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, ApplicationIntegrationType, InteractionContextType} from "discord.js";
-import https from "https";
+import {getText} from "../http";
 import {load} from "cheerio";
 import Paginator from "../paginator";
 
@@ -77,13 +77,7 @@ export default {
         const month = interaction.options.getNumber("month", false) ?? (today).getMonth();
         const monthName = months[month];
         const url = `https://www.ittf.com/${today.getFullYear()}-events-calendar/`;
-        const html = await new Promise<string>(resolve => {
-            https.get(url).on("response", function (response) {
-                let body = "";
-                response.on("data", (chunk) => body += chunk);
-                response.on("end", () => resolve(body));
-            });
-        });
+        const html = await getText(url);
         const $ = load(html);
         const content = $(".content");
         const ul = $(content.find("ul").get(month));
@@ -108,35 +102,30 @@ export default {
         const eventType = interaction.options.getString("type");
         const today = new Date();
         let year = today.getFullYear();
-        let monthNum = today.getMonth() + 1;
-        let month = monthNum.toString().padStart(2, "0");
+        let month = (today.getMonth() + 1).toString().padStart(2, "0");
         let week = getWeekNumber(today);
         // https://www.ittf.com/wp-content/uploads/2022/08/2022_35_SEN_MS.html
-        const url = `https://www.ittf.com/wp-content/uploads/${year}/${month}/${year}_${week}_SEN_${eventType}.html`;
-        const html = await new Promise<string>(resolve => {
-            https.get(url).on("response", function(response) {
-                let body = "";
+        const buildUrl = () => `https://www.ittf.com/wp-content/uploads/${year}/${month}/${year}_${week}_SEN_${eventType}.html`;
+        let url = buildUrl();
 
-                // Something went wrong, no update?
-                // Try last week's data
-                if (response.statusCode != 200) {
-                    today.setDate(today.getDate() - 7);
-                    year = today.getFullYear();
-                    monthNum = today.getMonth() + 1;
-                    month = monthNum.toString().padStart(2, "0");
-                    week = getWeekNumber(today);
-                    const backupUrl = `https://www.ittf.com/wp-content/uploads/${year}/${month}/${year}_${week}_SEN_${eventType}.html`;
-                    https.get(backupUrl).on("response", function(resp) {
-                        resp.on("data", (chunk) => body += chunk);
-                        resp.on("end", () => resolve(body));
-                    });
-                }
-                else {
-                    response.on("data", (chunk) => body += chunk);
-                    response.on("end", () => resolve(body));
-                }
-            });
-        });
+        let html: string;
+        try {
+            html = await getText(url);
+        }
+        catch {
+            // Something went wrong, no update? Try last week's data.
+            today.setDate(today.getDate() - 7);
+            year = today.getFullYear();
+            month = (today.getMonth() + 1).toString().padStart(2, "0");
+            week = getWeekNumber(today);
+            url = buildUrl();
+            try {
+                html = await getText(url);
+            }
+            catch {
+                return await interaction.editReply("Something went wrong trying to get the rankings!");
+            }
+        }
         const $ = load(html);
         const list = $("tbody");
         // console.log(list.children);

@@ -1,5 +1,5 @@
 import {SlashCommandBuilder, ChatInputCommandInteraction, Client, MessageFlags} from "discord.js";
-import https from "https";
+import {getText} from "../http";
 import {load} from "cheerio";
 import fs from "fs";
 import path from "path";
@@ -34,13 +34,7 @@ export default {
         for (const category of categories) {
             await interaction.editReply(`Updating cache for ${category}.`);
             const url = `https://revspin.net/${category}/`;
-            const html = await new Promise<string>(resolve => {
-                https.get(url).on("response", function (response) {
-                    let body = "";
-                    response.on("data", (chunk) => body += chunk);
-                    response.on("end", () => resolve(body));
-                });
-            });
+            const html = await getText(url);
             const $ = load(html);
             const data = $("td.cell_name").map((_, el) => {
                 const base = $(el);

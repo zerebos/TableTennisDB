@@ -1,6 +1,6 @@
 import {SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder, ChatInputCommandInteraction, InteractionContextType, ApplicationIntegrationType} from "discord.js";
 import Similarity from "string-similarity";
-import https from "https";
+import {getText} from "../http";
 import {load} from "cheerio";
 import type {RevspinCacheEntry} from "../types";
 
@@ -56,13 +56,7 @@ export default {
         if (!passes) return await interaction.editReply({content: `Could not find a definitive result for \`${query}\`, please be more specific.`});
 
         const url = `https://revspin.net/${top.href}`;
-        const html = await new Promise<string>(resolve => {
-            https.get(url).on("response", function (response) {
-                let body = "";
-                response.on("data", (chunk) => body += chunk);
-                response.on("end", () => resolve(body));
-            });
-        });
+        const html = await getText(url);
         const $ = load(html);
         const name = $("h1").text().trim();
         const price = $("#price_show").text().trim();

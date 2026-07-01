@@ -94,7 +94,6 @@ export default {
         }
         if (id === "save") {
             const data: Record<string, string> = {};
-            interaction.message.embeds[0].fields.map(f => ({[f.name]: f.value}));
             interaction.message.embeds[0].fields.forEach(f => data[f.name.toLowerCase()] = f.value);
             await profiles.set(interaction.user.id, data);
             await interaction.update({embeds: [new EmbedBuilder().setColor("Green").setDescription("Profile saved successfully!")], components: []});
